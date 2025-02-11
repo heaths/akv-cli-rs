@@ -1,0 +1,21 @@
+{
+  "name": "ordinal-rs",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "editorconfig.editorconfig",
+        "rust-lang.rust-analyzer",
+        "streetsidesoftware.code-spell-checker",
+        "tamasfe.even-better-toml",
+        "vadimcn.vscode-lldb"
+      ]
+    }
+  },
+  "onCreateCommand": "rustup show"
+}

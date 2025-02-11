@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "tests",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib"
+        ]
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "envFile": ".azure/dev/.env"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "executable",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=akv"
+        ],
+        "filter": {
+          "name": "akv",
+          "kind": "bin"
+        }
+      },
+      "args": [
+        "read",
+        "https://tfju3qu7ykig7q.vault.azure.net/secrets/my-secret/733f8654089741be91bebe692f850487"
+      ],
+      "cwd": "${workspaceFolder}",
+      "envFile": ".azure/dev/.env"
+    }
+  ]
+}

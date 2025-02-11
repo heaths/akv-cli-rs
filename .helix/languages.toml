@@ -1,0 +1,18 @@
+[language-server.rust-analyzer.config]
+cargo.features = "all"
+check.command = "clippy"
+checkOnSave.enable = true
+
+[[language]]
+name = "json"
+auto-format = true
+indent = { tab-width = 2, unit = "  " }
+
+[[language]]
+name = "rust"
+auto-format = true
+
+[[language]]
+name = "toml"
+auto-format = true
+indent = { tab-width = 4, unit = "    " }

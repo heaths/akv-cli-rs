@@ -1,0 +1,27 @@
+[package]
+name = "akv-cli"
+version = "0.1.0"
+edition = "2021"
+description = """
+The Azure Key Vault CLI can be used to read secrets, pass them securely to other commands,
+or inject them into configuration files.
+"""
+authors = ["Heath Stewart (https://github.com/heaths)"]
+repository = "https://github.com/heaths/akv-cli-rs"
+license = "MIT"
+
+[dependencies]
+azure_core = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "d9b74d0bc66a276bef8c1fb2517403e606528732", features = [
+    "reqwest_rustls",
+] }
+azure_identity = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "d9b74d0bc66a276bef8c1fb2517403e606528732" }
+azure_security_keyvault_secrets = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "d9b74d0bc66a276bef8c1fb2517403e606528732" }
+clap = { version = "4.5.28", features = ["derive"] }
+futures = "0.3.31"
+tokio = { version = "1.43.0", features = ["rt", "macros"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+
+[[bin]]
+name = "akv"
+path = "src/main.rs"

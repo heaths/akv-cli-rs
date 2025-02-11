@@ -1,0 +1,78 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+    - main
+  workflow_call:
+    inputs:
+      release:
+        description: Whether this is running as part of a release workflow.
+        required: false
+        type: boolean
+        default: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+        - macos-latest
+        - ubuntu-latest
+        - windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Set up toolchain
+      run: rustup show
+    - name: Test
+      run: cargo test --all-features --workspace
+
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Set up toolchain
+      run: rustup show
+    - name: Check formatting
+      if: ${{ success() && (!inputs.release || github.event_name != 'workflow_call') }}
+      run: cargo fmt --all -- --check
+    - name: Lint
+      run: cargo clippy --all-features --all-targets --no-deps --workspace
+    - name: Check spelling
+      uses: streetsidesoftware/cspell-action@v6
+      with:
+        config: .cspell.json
+    - name: Build documentation
+      run: cargo doc --all-features --no-deps --workspace

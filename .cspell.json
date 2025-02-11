@@ -1,0 +1,45 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "useGitignore": true,
+  "ignorePaths": [
+    ".cspell.json",
+    ".devcontainer/",
+    ".github/",
+    ".vscode/",
+    "rust-toolchain.toml"
+  ],
+  "words": [
+    "clippy",
+    "repr",
+    "rustlang",
+    "rustup"
+  ],
+  "dictionaryDefinitions": [
+    {
+      "name": "crates",
+      "words": [],
+      "noSuggest": true
+    }
+  ],
+  "overrides": [
+    {
+      "filename": "Cargo.toml",
+      "dictionaries": [
+        "crates"
+      ]
+    },
+    {
+      "filename": "**/*.md",
+      "dictionaries": [
+        "rust"
+      ]
+    },
+    {
+      "filename": "**/*.rs",
+      "dictionaries": [
+        "crates"
+      ]
+    }
+  ]
+}
