@@ -18,7 +18,9 @@
   "dictionaryDefinitions": [
     {
       "name": "crates",
-      "words": [],
+      "words": [
+        "reqwest"
+      ],
       "noSuggest": true
     }
   ],
