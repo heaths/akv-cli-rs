@@ -11,11 +11,9 @@ repository = "https://github.com/heaths/akv-cli-rs"
 license = "MIT"
 
 [dependencies]
-azure_core = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "d9b74d0bc66a276bef8c1fb2517403e606528732", features = [
-    "reqwest_rustls",
-] }
-azure_identity = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "d9b74d0bc66a276bef8c1fb2517403e606528732" }
-azure_security_keyvault_secrets = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "d9b74d0bc66a276bef8c1fb2517403e606528732" }
+azure_core = { git = "https://github.com/heaths/azure-sdk-for-rust", branch = "reqwest-native-tls" }
+azure_identity = { git = "https://github.com/heaths/azure-sdk-for-rust", branch = "reqwest-native-tls" }
+azure_security_keyvault_secrets = { git = "https://github.com/heaths/azure-sdk-for-rust", branch = "reqwest-native-tls" }
 clap = { version = "4.5.28", features = ["derive"] }
 futures = "0.3.31"
 tokio = { version = "1.43.0", features = ["rt", "macros"] }
