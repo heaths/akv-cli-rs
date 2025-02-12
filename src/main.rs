@@ -1,11 +1,12 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use akv_cli::get_secret;
+use akv_cli::{get_secret, list_secrets};
 use azure_core::Url;
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::{Parser, Subcommand};
+use futures::StreamExt as _;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
@@ -31,8 +32,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let credentials = DefaultAzureCredential::new()?;
     match args.command {
         Commands::List { vault } => {
-            let _client = SecretClient::new(vault.as_str(), credentials.clone(), None)?;
-            todo!()
+            let client = SecretClient::new(vault.as_str(), credentials.clone(), None)?;
+            let mut pager = list_secrets(&client).await?;
+            while let Some(secret) = pager.next().await? {
+                println!("{:#?}", secret);
+            }
         }
         Commands::Read { id } => {
             let id: ResourceId = id.try_into()?;
