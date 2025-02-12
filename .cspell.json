@@ -19,7 +19,9 @@
     {
       "name": "crates",
       "words": [
-        "reqwest"
+        "reqwest",
+        "prettytable",
+        "timeago"
       ],
       "noSuggest": true
     }

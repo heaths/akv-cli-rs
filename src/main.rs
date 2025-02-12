@@ -2,11 +2,14 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use akv_cli::{get_secret, list_secrets};
-use azure_core::Url;
+use azure_core::{date::OffsetDateTime, Url};
 use azure_identity::DefaultAzureCredential;
-use azure_security_keyvault_secrets::{ResourceId, SecretClient};
+use azure_security_keyvault_secrets::{ResourceExt, ResourceId, SecretClient};
 use clap::{Parser, Subcommand};
-use futures::StreamExt as _;
+use futures::TryStreamExt;
+use prettytable::{format, row, Table};
+use std::pin::pin;
+use timeago::Formatter;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
@@ -33,10 +36,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match args.command {
         Commands::List { vault } => {
             let client = SecretClient::new(vault.as_str(), credentials.clone(), None)?;
-            let mut pager = list_secrets(&client).await?;
-            while let Some(secret) = pager.next().await? {
-                println!("{:#?}", secret);
+            let mut pager = pin!(list_secrets(&client));
+
+            let mut table = Table::new();
+            table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+            table.set_titles(row!["NAME", "ID", "EDITED", "TYPE"]);
+
+            let now = OffsetDateTime::now_utc();
+            let formatter = Formatter::new();
+            while let Some(secret) = pager.try_next().await? {
+                let resource: ResourceId = secret.resource_id()?;
+                let edited = secret
+                    .attributes
+                    .and_then(|attrs| attrs.updated)
+                    .map(|time| now - time)
+                    .map(into_std_duration)
+                    .map_or_else(String::new, |d| formatter.convert(d));
+                let r#type = secret.content_type.unwrap_or_default();
+                table.add_row(row![Fg -> resource.name, resource.source_id, edited, r#type]);
             }
+            // cspell:ignore printstd
+            table.printstd();
         }
         Commands::Read { id } => {
             let id: ResourceId = id.try_into()?;
@@ -75,4 +95,8 @@ enum Commands {
         /// The URL to a secret in Azure Key Vault e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
         id: Url,
     },
+}
+
+fn into_std_duration(d: time::Duration) -> std::time::Duration {
+    std::time::Duration::from_secs(d.whole_seconds() as u64)
 }
