@@ -124,6 +124,12 @@ impl From<azure_core::Error> for Error {
     }
 }
 
+impl From<url::ParseError> for Error {
+    fn from(error: url::ParseError) -> Self {
+        Self::new(ErrorKind::InvalidData, error)
+    }
+}
+
 #[derive(Debug)]
 enum Repr {
     Simple(ErrorKind),

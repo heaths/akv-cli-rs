@@ -3,6 +3,8 @@
 
 mod error;
 
+use std::pin::Pin;
+
 use async_stream::try_stream;
 use azure_security_keyvault_secrets::{
     models::{SecretBundle, SecretItem},
@@ -13,8 +15,10 @@ use futures::{Stream, StreamExt};
 use tracing::Level;
 
 #[tracing::instrument(level = Level::INFO, skip(client), fields(vault = %client.endpoint()))]
-pub fn list_secrets(client: &SecretClient) -> impl Stream<Item = Result<SecretItem>> + '_ {
-    try_stream! {
+pub fn list_secrets(
+    client: &SecretClient,
+) -> Pin<Box<impl Stream<Item = Result<SecretItem>> + '_>> {
+    Box::pin(try_stream! {
         let mut pager = client.get_secrets(None)?;
         while let Some(page) = pager.next().await {
             let result = page?.into_body().await?;
@@ -24,7 +28,7 @@ pub fn list_secrets(client: &SecretClient) -> impl Stream<Item = Result<SecretIt
                 }
             }
         }
-    }
+    })
 }
 
 #[tracing::instrument(level = Level::INFO, skip(client), fields(vault = %client.endpoint()), err)]
