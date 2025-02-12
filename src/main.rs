@@ -60,6 +60,7 @@ enum Commands {
         vault: Url,
     },
 
+    /// Read a secret from an Azure Key Vault.
     Read {
         /// The URL to a secret in Azure Key Vault e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
         id: Url,
