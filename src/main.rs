@@ -1,10 +1,10 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use akv_cli::{deconstruct, get_secret};
+use akv_cli::get_secret;
 use azure_core::Url;
 use azure_identity::DefaultAzureCredential;
-use azure_security_keyvault_secrets::SecretClient;
+use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::{Parser, Subcommand};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
@@ -30,9 +30,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             todo!()
         }
         Commands::Read { id } => {
-            let (vault, name, version) = deconstruct(id)?;
-            let client = SecretClient::new(&vault, credentials.clone(), None)?;
-            let secret = get_secret(&client, name.as_ref(), version.as_deref()).await?;
+            let id: ResourceId = id.try_into()?;
+            let client = SecretClient::new(&id.vault_url, credentials.clone(), None)?;
+            let secret = get_secret(&client, id.name.as_ref(), id.version.as_deref()).await?;
             if let Some(value) = secret.value {
                 println!("{value}");
             }
