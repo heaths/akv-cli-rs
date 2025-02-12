@@ -5,9 +5,10 @@ use akv_cli::Result;
 use akv_cli::{get_secret, list_secrets};
 use azure_core::{credentials::TokenCredential, date::OffsetDateTime, Url};
 use azure_identity::DefaultAzureCredential;
-use azure_security_keyvault_secrets::{ResourceExt, ResourceId, SecretClient};
+use azure_security_keyvault_secrets::models::SecretItem;
+use azure_security_keyvault_secrets::{ResourceExt as _, ResourceId, SecretClient};
 use clap::{Parser, Subcommand};
-use futures::TryStreamExt;
+use futures::TryStreamExt as _;
 use prettytable::{format, row, Table};
 use std::sync::Arc;
 use timeago::Formatter;
@@ -35,8 +36,8 @@ async fn main() -> Result<()> {
 
     let credentials = DefaultAzureCredential::new()?;
     match args.command {
-        Commands::List { vault } => list(credentials.clone(), vault).await,
-        Commands::Read { id } => read(credentials.clone(), id).await,
+        cmd @ Commands::List { .. } => list(credentials.clone(), &cmd).await,
+        cmd @ Commands::Read { .. } => read(credentials.clone(), &cmd).await,
     }
 }
 
@@ -58,6 +59,10 @@ enum Commands {
         /// The host name of the Azure Key Vault e.g., "https://my-vault.vault.azure.net".
         #[arg(long)]
         vault: Url,
+
+        /// List more details about each secret.
+        #[arg(long)]
+        long: bool,
     },
 
     /// Read a secret from an Azure Key Vault.
@@ -67,9 +72,14 @@ enum Commands {
     },
 }
 
-async fn list(credentials: Arc<dyn TokenCredential>, vault: Url) -> Result<()> {
+async fn list(credentials: Arc<dyn TokenCredential>, cmd: &Commands) -> Result<()> {
+    let Commands::List { vault, long } = cmd else {
+        panic!("invalid command");
+    };
+
     let client = SecretClient::new(vault.as_str(), credentials, None)?;
-    let mut pager = list_secrets(&client);
+    let mut secrets: Vec<SecretItem> = list_secrets(&client).try_collect().await?;
+    secrets.sort_by(|a, b| a.id.cmp(&b.id));
 
     let mut table = Table::new();
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
@@ -77,8 +87,17 @@ async fn list(credentials: Arc<dyn TokenCredential>, vault: Url) -> Result<()> {
 
     let now = OffsetDateTime::now_utc();
     let formatter = Formatter::new();
-    while let Some(secret) = pager.try_next().await? {
+    for secret in secrets {
         let resource: ResourceId = secret.resource_id()?;
+        let mut source_id = resource.source_id;
+        if *long {
+            if let Some(version) = resource.version {
+                source_id = source_id
+                    .parse::<Url>()?
+                    .join(version.as_ref())?
+                    .to_string();
+            }
+        }
         let edited = secret
             .attributes
             .and_then(|attrs| attrs.updated)
@@ -86,14 +105,19 @@ async fn list(credentials: Arc<dyn TokenCredential>, vault: Url) -> Result<()> {
             .map(into_std_duration)
             .map_or_else(String::new, |d| formatter.convert(d));
         let r#type = secret.content_type.unwrap_or_default();
-        table.add_row(row![Fg -> resource.name, resource.source_id, edited, r#type]);
+        table.add_row(row![Fg -> resource.name, source_id, edited, r#type]);
     }
+
     // cspell:ignore printstd
     table.printstd();
 
     Ok(())
 }
-async fn read(credentials: Arc<dyn TokenCredential>, id: Url) -> Result<()> {
+async fn read(credentials: Arc<dyn TokenCredential>, cmd: &Commands) -> Result<()> {
+    let Commands::Read { id } = cmd else {
+        panic!("invalid command");
+    };
+
     let id: ResourceId = id.try_into()?;
     let client = SecretClient::new(&id.vault_url, credentials.clone(), None)?;
     let secret = get_secret(&client, id.name.as_ref(), id.version.as_deref()).await?;
