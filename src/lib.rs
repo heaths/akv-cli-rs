@@ -9,11 +9,14 @@ use azure_security_keyvault_secrets::{
 };
 pub use error::*;
 use futures::{stream, TryStream};
+use tracing::Level;
 
-pub async fn list_secrets(_client: &SecretClient) -> impl TryStream {
+#[tracing::instrument(level = Level::INFO, skip(client), fields(vault = %client.endpoint()))]
+pub async fn list_secrets(client: &SecretClient) -> impl TryStream {
     stream::empty::<Result<SecretItem>>()
 }
 
+#[tracing::instrument(level = Level::INFO, skip(client), fields(vault = %client.endpoint()), err)]
 pub async fn get_secret(
     client: &SecretClient,
     name: &str,

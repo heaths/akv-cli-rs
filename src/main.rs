@@ -7,21 +7,26 @@ use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::{Parser, Subcommand};
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    let def = match args.verbose {
-        1 => LevelFilter::DEBUG,
-        2 => LevelFilter::TRACE,
-        _ => LevelFilter::INFO,
+    let verbosity = match args.verbose {
+        0 => LevelFilter::OFF,
+        1 => LevelFilter::INFO,
+        2 => LevelFilter::DEBUG,
+        _ => LevelFilter::TRACE,
     };
-    let filter = EnvFilter::builder()
-        .with_default_directive(def.into())
-        .from_env_lossy();
-    tracing_subscriber::fmt().with_env_filter(filter).init();
+    let mut filter = EnvFilter::from_default_env();
+    if matches!(filter.max_level_hint(), Some(level) if level < verbosity) {
+        filter = filter.add_directive(verbosity.into());
+    }
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_span_events(FmtSpan::NEW)
+        .init();
 
     let credentials = DefaultAzureCredential::new()?;
     match args.command {
