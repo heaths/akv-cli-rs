@@ -9,7 +9,7 @@ use azure_security_keyvault_secrets::{ResourceExt, ResourceId, SecretClient};
 use clap::{Parser, Subcommand};
 use futures::TryStreamExt;
 use prettytable::{format, row, Table};
-use std::{pin::pin, sync::Arc};
+use std::sync::Arc;
 use timeago::Formatter;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
@@ -69,7 +69,7 @@ enum Commands {
 
 async fn list(credentials: Arc<dyn TokenCredential>, vault: Url) -> Result<()> {
     let client = SecretClient::new(vault.as_str(), credentials, None)?;
-    let mut pager = pin!(list_secrets(&client));
+    let mut pager = list_secrets(&client);
 
     let mut table = Table::new();
     table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
