@@ -18,12 +18,27 @@ cargo install akv-cli
 Inspired by the [1Password CLI], you can use similar commands to pull secrets from [Azure Key Vault].
 Though the crate is named `akv-cli`, note that the actual program is named `akv`.
 
+### Listing secrets
+
+Use the `list` command to list secrets.
+
+```bash
+akv list https://my-vault.vault.azure.net
+```
+
 ### Reading a secret
 
 You can pass secrets to terminal applications, though how exactly depends on your shell. For bash,
 
 ```bash
 cargo login $(akv read https://my-vault.vault.azure.net/secrets/my-secret)
+```
+
+Note that secrets in Key Vault are versioned. The example above reads the latest version, but you can also read any version.
+It's often important to refer to a specific version until you're ready to rotate to a new secret.
+
+```bash
+akv read https://my-vault.vault.azure.net/secrets/my-secret/746984e474594896aad9aff48aca0849
 ```
 
 ## Background
