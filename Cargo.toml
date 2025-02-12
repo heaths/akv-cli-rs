@@ -11,11 +11,15 @@ repository = "https://github.com/heaths/akv-cli-rs"
 license = "MIT"
 
 [dependencies]
+async-stream = "0.3.6"
 azure_core = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "1ac0936c9d24dba20aef10dae3b1e643f21d507f" }
 azure_identity = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "1ac0936c9d24dba20aef10dae3b1e643f21d507f" }
 azure_security_keyvault_secrets = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "1ac0936c9d24dba20aef10dae3b1e643f21d507f" }
 clap = { version = "4.5.28", features = ["derive"] }
 futures = "0.3.31"
+prettytable-rs = "0.10.0"
+time = "0.3.37"
+timeago = "0.4.2"
 tokio = { version = "1.43.0", features = ["rt", "macros"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
