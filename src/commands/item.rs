@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use super::{parse_key_value, parse_key_value_opt};
+use super::{parse_key_value, parse_key_value_opt, VAULT_ENV_NAME};
 use akv_cli::{list_secrets, Result};
 use azure_core::{date::OffsetDateTime, Url};
 use azure_identity::DefaultAzureCredential;
@@ -28,7 +28,7 @@ pub enum Commands {
         secret: (String, String),
 
         /// The host name of the Azure Key Vault e.g., "https://my-vault.vault.azure.net".
-        #[arg(long)]
+        #[arg(long, env = VAULT_ENV_NAME)]
         vault: Url,
 
         /// The content type of the secret.
@@ -64,7 +64,7 @@ pub enum Commands {
     /// List secrets in an Azure Key Vault.
     List {
         /// The host name of the Azure Key Vault e.g., "https://my-vault.vault.azure.net".
-        #[arg(long)]
+        #[arg(long, env = VAULT_ENV_NAME)]
         vault: Url,
 
         /// List more details about each secret.

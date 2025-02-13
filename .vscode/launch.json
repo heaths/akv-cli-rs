@@ -31,8 +31,8 @@
         }
       },
       "args": [
-        "read",
-        "https://tfju3qu7ykig7q.vault.azure.net/secrets/my-secret/733f8654089741be91bebe692f850487"
+        "item",
+        "list"
       ],
       "cwd": "${workspaceFolder}",
       "envFile": ".azure/dev/.env"

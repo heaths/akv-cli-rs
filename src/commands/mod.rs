@@ -3,16 +3,17 @@
 
 mod item;
 
-use std::{
-    io::{self, Write},
-    str::FromStr,
-};
-
 use akv_cli::{get_secret, Error, Result};
 use azure_core::Url;
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::Subcommand;
+use std::{
+    io::{self, Write},
+    str::FromStr,
+};
+
+const VAULT_ENV_NAME: &str = "AZURE_KEYVAULT_URL";
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {

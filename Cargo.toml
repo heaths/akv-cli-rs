@@ -15,7 +15,8 @@ async-stream = "0.3.6"
 azure_core = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "1ac0936c9d24dba20aef10dae3b1e643f21d507f" }
 azure_identity = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "1ac0936c9d24dba20aef10dae3b1e643f21d507f" }
 azure_security_keyvault_secrets = { git = "https://github.com/Azure/azure-sdk-for-rust", rev = "1ac0936c9d24dba20aef10dae3b1e643f21d507f" }
-clap = { version = "4.5.28", features = ["derive"] }
+clap = { version = "4.5.28", features = ["derive", "env"] }
+dotenvy = "0.15.7"
 futures = "0.3.31"
 prettytable-rs = "0.10.0"
 time = "0.3.37"
