@@ -20,10 +20,10 @@ Though the crate is named `akv-cli`, note that the actual program is named `akv`
 
 ### Listing secrets
 
-Use the `list` command to list secrets.
+Use the `item list` command to list secrets.
 
 ```bash
-akv list https://my-vault.vault.azure.net
+akv item list https://my-vault.vault.azure.net
 ```
 
 ### Reading a secret
