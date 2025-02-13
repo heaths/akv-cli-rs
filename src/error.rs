@@ -3,6 +3,7 @@
 
 use std::{
     borrow::{Borrow, Cow},
+    convert::Infallible,
     fmt,
 };
 
@@ -112,9 +113,27 @@ impl From<ErrorKind> for Error {
     }
 }
 
+impl From<String> for Error {
+    fn from(value: String) -> Self {
+        Self::with_message(ErrorKind::Other, value)
+    }
+}
+
+impl From<Infallible> for Error {
+    fn from(_: Infallible) -> Self {
+        panic!("inconceivable")
+    }
+}
+
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
         Self::new(ErrorKind::Io, error)
+    }
+}
+
+impl From<std::num::ParseIntError> for Error {
+    fn from(error: std::num::ParseIntError) -> Self {
+        Self::new(ErrorKind::InvalidData, error)
     }
 }
 
