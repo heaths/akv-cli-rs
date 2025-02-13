@@ -1,3 +1,4 @@
 .azure
 .DS_Store
+.env
 /target

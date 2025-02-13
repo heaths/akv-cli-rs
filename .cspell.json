@@ -11,6 +11,7 @@
   ],
   "words": [
     "clippy",
+    "dotenv",
     "repr",
     "rustlang",
     "rustup"
@@ -19,6 +20,7 @@
     {
       "name": "crates",
       "words": [
+        "dotenvy",
         "reqwest",
         "prettytable",
         "timeago"
