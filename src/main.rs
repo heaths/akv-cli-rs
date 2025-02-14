@@ -29,6 +29,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_span_events(FmtSpan::NEW)
+        .with_writer(std::io::stderr)
         .init();
 
     args.handle().await
