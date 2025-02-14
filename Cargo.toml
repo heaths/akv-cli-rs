@@ -27,6 +27,11 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 url = "2.5.4"
 
+[profile.release]
+opt-level = "s"
+panic = "abort"
+strip = "debuginfo"
+
 [[bin]]
 name = "akv"
 path = "src/main.rs"
