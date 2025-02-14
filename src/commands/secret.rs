@@ -1,8 +1,12 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use super::{parse_key_value, parse_key_value_opt, VAULT_ENV_NAME};
-use akv_cli::{list_secrets, Result};
+use super::VAULT_ENV_NAME;
+use akv_cli::{
+    list_secrets,
+    parsing::{parse_key_value, parse_key_value_opt},
+    Result,
+};
 use azure_core::{date::OffsetDateTime, Url};
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{

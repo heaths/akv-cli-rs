@@ -3,12 +3,10 @@
 
 pub mod cache;
 mod error;
+pub mod parsing;
 
 use async_stream::try_stream;
-use azure_security_keyvault_secrets::{
-    models::{SecretBundle, SecretItem},
-    SecretClient,
-};
+use azure_security_keyvault_secrets::{models::SecretItem, SecretClient};
 pub use error::*;
 use futures::{Stream, StreamExt};
 use std::pin::Pin;
@@ -29,17 +27,4 @@ pub fn list_secrets(
             }
         }
     })
-}
-
-#[tracing::instrument(level = Level::INFO, skip(client), fields(vault = %client.endpoint()), err)]
-pub async fn get_secret(
-    client: &SecretClient,
-    name: &str,
-    version: Option<&str>,
-) -> Result<SecretBundle> {
-    Ok(client
-        .get_secret(name, version.unwrap_or_default(), None)
-        .await?
-        .into_body()
-        .await?)
 }

@@ -137,6 +137,12 @@ impl From<std::num::ParseIntError> for Error {
     }
 }
 
+impl From<std::env::VarError> for Error {
+    fn from(error: std::env::VarError) -> Self {
+        Self::new(ErrorKind::Other, error)
+    }
+}
+
 impl From<azure_core::Error> for Error {
     fn from(error: azure_core::Error) -> Self {
         Self::new(ErrorKind::Other, error)
