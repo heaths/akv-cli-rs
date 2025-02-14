@@ -1,17 +1,15 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+mod read;
 mod secret;
 
-use akv_cli::{get_secret, Error, Result};
-use azure_core::Url;
-use azure_identity::DefaultAzureCredential;
-use azure_security_keyvault_secrets::{ResourceId, SecretClient};
+use std::{borrow::Cow, str::FromStr};
+
+use akv_cli::{Error, ErrorKind, Result};
+use azure_security_keyvault_secrets::ResourceId;
 use clap::Subcommand;
-use std::{
-    io::{self, Write},
-    str::FromStr,
-};
+use url::Url;
 
 const VAULT_ENV_NAME: &str = "AZURE_KEYVAULT_URL";
 
@@ -22,42 +20,40 @@ pub enum Commands {
     Secret(secret::Commands),
 
     /// Read a secret from an Azure Key Vault.
-    Read {
-        /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
-        id: Url,
-
-        /// Do not print a new line after the secret.
-        #[arg(short = 'n', long)]
-        no_newline: bool,
-    },
+    Read(read::Args),
 }
 
 impl Commands {
     pub async fn handle(&self) -> Result<()> {
         match self {
-            Commands::Secret(items) => items.handle().await,
-            Commands::Read { .. } => self.read().await,
+            Commands::Secret(command) => command.handle().await,
+            Commands::Read(args) => args.read().await,
         }
     }
+}
 
-    async fn read(&self) -> Result<()> {
-        let Commands::Read { id, no_newline } = self else {
-            panic!("invalid command");
-        };
-        let id: ResourceId = id.try_into()?;
-
-        let client = SecretClient::new(&id.vault_url, DefaultAzureCredential::new()?, None)?;
-        let secret = get_secret(&client, id.name.as_ref(), id.version.as_deref()).await?;
-        if let Some(value) = secret.value {
-            if *no_newline {
-                print!("{value}");
-                return Ok(io::stdout().flush()?);
-            }
-
-            println!("{value}");
+#[allow(clippy::type_complexity)]
+fn select<'a>(
+    id: Option<&Url>,
+    vault: Option<&'a Url>,
+    name: Option<&'a String>,
+) -> akv_cli::Result<(Cow<'a, str>, Cow<'a, str>, Option<Cow<'a, str>>)> {
+    match (id, vault, name) {
+        (Some(id), _, None) => {
+            let resource: ResourceId = id.try_into()?;
+            Ok((
+                Cow::Owned(resource.vault_url),
+                Cow::Owned(resource.name),
+                resource.version.map(Cow::Owned),
+            ))
         }
-
-        Ok(())
+        (None, Some(vault), Some(name)) => {
+            Ok((Cow::Borrowed(vault.as_str()), Cow::Borrowed(name), None))
+        }
+        _ => Err(akv_cli::Error::with_message(
+            ErrorKind::InvalidData,
+            "invalid arguments",
+        )),
     }
 }
 
