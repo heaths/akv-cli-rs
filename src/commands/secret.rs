@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use super::{parse_key_value, parse_key_value_opt, VAULT_ENV_NAME};
-use akv_cli::{list_secrets, ErrorKind, Result};
+use akv_cli::{list_secrets, Result};
 use azure_core::{date::OffsetDateTime, Url};
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{
@@ -48,7 +48,7 @@ pub enum Commands {
         id: Option<Url>,
 
         /// The secret name.
-        #[arg(short = 'n', long, group = "ident", requires = "vault")]
+        #[arg(long, group = "ident", requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -72,7 +72,7 @@ pub enum Commands {
         id: Option<Url>,
 
         /// The secret name.
-        #[arg(short = 'n', long, group = "ident", requires = "vault")]
+        #[arg(long, group = "ident", requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -152,13 +152,13 @@ impl Commands {
             panic!("invalid command");
         };
 
-        let (vault, name, version) = select(id.as_ref(), vault.as_ref(), name.as_ref())?;
+        let (vault, name, version) = super::select(id.as_ref(), vault.as_ref(), name.as_ref())?;
         let current = Span::current();
-        current.record("vault", vault.as_str());
-        current.record("name", name.as_str());
+        current.record("vault", &*vault);
+        current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = SecretClient::new(vault.as_str(), DefaultAzureCredential::new()?, None)?;
+        let client = SecretClient::new(&vault, DefaultAzureCredential::new()?, None)?;
 
         let tags = HashMap::from_iter(
             tags.iter()
@@ -172,7 +172,7 @@ impl Commands {
 
         let secret = client
             .update_secret(
-                name.as_str(),
+                &name,
                 version.as_deref().unwrap_or_default(),
                 params.try_into()?,
                 None,
@@ -190,10 +190,10 @@ impl Commands {
             panic!("invalid command");
         };
 
-        let (vault, name, version) = select(id.as_ref(), vault.as_ref(), name.as_ref())?;
+        let (vault, name, version) = super::select(id.as_ref(), vault.as_ref(), name.as_ref())?;
         let current = Span::current();
-        current.record("vault", &vault);
-        current.record("name", &name);
+        current.record("vault", &*vault);
+        current.record("name", &*name);
         current.record("version", version.as_deref());
 
         let client = SecretClient::new(&vault, DefaultAzureCredential::new()?, None)?;
@@ -268,24 +268,6 @@ impl Commands {
         table.printstd();
 
         Ok(())
-    }
-}
-
-fn select(
-    id: Option<&Url>,
-    vault: Option<&Url>,
-    name: Option<&String>,
-) -> akv_cli::Result<(String, String, Option<String>)> {
-    match (id, vault, name) {
-        (Some(id), _, None) => {
-            let resource: ResourceId = id.try_into()?;
-            Ok((resource.vault_url, resource.name, resource.version))
-        }
-        (None, Some(vault), Some(name)) => Ok((vault.to_string(), name.to_owned(), None)),
-        _ => Err(akv_cli::Error::with_message(
-            ErrorKind::InvalidData,
-            "invalid arguments",
-        )),
     }
 }
 

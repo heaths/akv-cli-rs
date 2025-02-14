@@ -18,12 +18,14 @@ cargo install akv-cli
 Inspired by the [1Password CLI], you can use similar commands to pull secrets from [Azure Key Vault].
 Though the crate is named `akv-cli`, note that the actual program is named `akv`.
 
-### Listing secrets
-
-Use the `item list` command to list secrets.
+Some arguments can read environment variables, e.g., `--vault` which reads from `AZURE_KEYVAULT_URL`.
+This information can be found in `--help` for commands. This makes it easy to pass just the secret name e.g.,
 
 ```bash
-akv item list https://my-vault.vault.azure.net
+export AZURE_KEYVAULT_URL=https://my-vault.vault.azure.net
+
+akv secret list
+akv read --name my-secret
 ```
 
 ### Reading a secret
@@ -39,6 +41,20 @@ It's often important to refer to a specific version until you're ready to rotate
 
 ```bash
 akv read https://my-vault.vault.azure.net/secrets/my-secret/746984e474594896aad9aff48aca0849
+```
+
+### Managing secrets
+
+You can create, get, edit, and list secrets e.g.,
+
+```bash
+akv secret list --vault https://my-vault.vault.azure.net
+```
+
+Read complete usage using `--help`:
+
+```bash
+akv secret --help
 ```
 
 ## Background
