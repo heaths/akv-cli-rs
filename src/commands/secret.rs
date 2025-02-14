@@ -44,7 +44,16 @@ pub enum Commands {
     /// Edits a secret in an Azure Key Vault.
     Edit {
         /// The URL to a secret in Azure Key Vault e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
-        id: Url,
+        #[arg(group = "ident")]
+        id: Option<Url>,
+
+        /// The name of a secret in the `vault`.
+        #[arg(short = 'n', long, group = "ident", requires = "vault")]
+        name: Option<String>,
+
+        /// The host name of the Azure Key Vault e.g., "https://my-vault.vault.azure.net".
+        #[arg(long, conflicts_with = "id", requires = "name", env = VAULT_ENV_NAME)]
+        vault: Option<Url>,
 
         /// The content type of the secret.
         #[arg(long)]
@@ -56,6 +65,7 @@ pub enum Commands {
         tags: Vec<(String, Option<String>)>,
     },
 
+    /// Gets information about a secret in an Azure Key Vault.
     Get {
         /// The URL to a secret in Azure Key Vault e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
         id: Url,
@@ -100,6 +110,7 @@ impl Commands {
         current.record("name", secret.0.as_str());
 
         let client = SecretClient::new(vault.as_str(), DefaultAzureCredential::new()?, None)?;
+
         let params = SecretSetParameters {
             value: Some(secret.0.to_string()),
             content_type: content_type.clone(),
@@ -123,33 +134,43 @@ impl Commands {
     async fn edit(&self) -> Result<()> {
         let Commands::Edit {
             id,
+            vault,
+            name,
             content_type,
             tags,
         } = self
         else {
             panic!("invalid command");
         };
-        let id: ResourceId = id.try_into()?;
+        let (vault, name, version) = match (id, vault, name) {
+            (Some(id), None, None) => {
+                let resource: ResourceId = id.try_into()?;
+                (resource.vault_url, resource.name, resource.version)
+            }
+            (None, Some(vault), Some(name)) => (vault.to_string(), name.to_owned(), None),
+            _ => panic!("invalid arguments"),
+        };
 
         let current = Span::current();
-        current.record("vault", id.vault_url.as_str());
-        current.record("name", id.name.as_str());
+        current.record("vault", vault.as_str());
+        current.record("name", name.as_str());
 
-        let client =
-            SecretClient::new(id.vault_url.as_str(), DefaultAzureCredential::new()?, None)?;
+        let client = SecretClient::new(vault.as_str(), DefaultAzureCredential::new()?, None)?;
+
+        let tags = HashMap::from_iter(
+            tags.iter()
+                .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
+        );
         let params = SecretUpdateParameters {
             content_type: content_type.clone(),
-            tags: Some(HashMap::from_iter(
-                tags.iter()
-                    .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
-            )),
+            tags: if !tags.is_empty() { Some(tags) } else { None },
             ..Default::default()
         };
 
         let secret = client
             .update_secret(
-                id.name.as_str(),
-                id.version.as_deref().unwrap_or_default(),
+                name.as_str(),
+                version.as_deref().unwrap_or_default(),
                 params.try_into()?,
                 None,
             )
