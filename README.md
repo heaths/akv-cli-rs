@@ -28,6 +28,25 @@ akv secret list
 akv read --name my-secret
 ```
 
+### Injecting secrets
+
+You can read a templated file or from stdin to inject secrets into the stream.
+Any secret ID e.g., `https://my-vault.vault.azure.net/secrets/my-secret` between `{{ }}` will be replaced, if it exists.
+
+```bash
+echo "my-secret: {{ https://my-vault.vault.azure.net/secrets/my-secret }}" | akv inject
+```
+
+You can also read from stdin, or from files using `--in-file` e.g.,
+
+```bash
+cat <<'EOF' | akv inject -o config.json
+{
+    "token": "{{ https://my-vault.vault.azure.net/secrets/my-secret/746984e474594896aad9aff48aca0849 }}"
+}
+EOF
+```
+
 ### Reading a secret
 
 You can pass secrets to terminal applications, though how exactly depends on your shell. For bash,

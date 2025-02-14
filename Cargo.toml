@@ -9,6 +9,7 @@ or inject them into configuration files.
 authors = ["Heath Stewart (https://github.com/heaths)"]
 repository = "https://github.com/heaths/akv-cli-rs"
 license = "MIT"
+rust-version = "1.80"
 
 [dependencies]
 async-stream = "0.3.6"

@@ -1,25 +1,28 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+mod inject;
 mod read;
 mod secret;
-
-use std::{borrow::Cow, str::FromStr};
 
 use akv_cli::{Error, ErrorKind, Result};
 use azure_security_keyvault_secrets::ResourceId;
 use clap::Subcommand;
+use std::{borrow::Cow, str::FromStr};
 use url::Url;
 
 const VAULT_ENV_NAME: &str = "AZURE_KEYVAULT_URL";
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Manage secrets in an Azure Key Vault.
+    /// Manage secrets in Azure Key Vault.
     #[command(subcommand)]
     Secret(secret::Commands),
 
-    /// Read a secret from an Azure Key Vault.
+    /// Inject secrets from Azure Key Vault into a templated file or input between {{ }}
+    Inject(inject::Args),
+
+    /// Read a secret from Azure Key Vault.
     Read(read::Args),
 }
 
@@ -27,6 +30,7 @@ impl Commands {
     pub async fn handle(&self) -> Result<()> {
         match self {
             Commands::Secret(command) => command.handle().await,
+            Commands::Inject(args) => args.inject().await,
             Commands::Read(args) => args.read().await,
         }
     }
