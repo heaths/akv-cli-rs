@@ -23,7 +23,7 @@ pub enum Commands {
 
     /// Read a secret from an Azure Key Vault.
     Read {
-        /// The URL to a secret in Azure Key Vault e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
+        /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
         id: Url,
 
         /// Do not print a new line after the secret.

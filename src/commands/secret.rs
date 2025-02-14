@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use super::{parse_key_value, parse_key_value_opt, VAULT_ENV_NAME};
-use akv_cli::{list_secrets, Result};
+use akv_cli::{list_secrets, ErrorKind, Result};
 use azure_core::{date::OffsetDateTime, Url};
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{
@@ -27,7 +27,7 @@ pub enum Commands {
         #[arg(value_name = "NAME=VALUE", value_parser = parse_key_value::<String>)]
         secret: (String, String),
 
-        /// The host name of the Azure Key Vault e.g., "https://my-vault.vault.azure.net".
+        /// The vault URL e.g., "https://my-vault.vault.azure.net".
         #[arg(long, env = VAULT_ENV_NAME)]
         vault: Url,
 
@@ -43,16 +43,16 @@ pub enum Commands {
 
     /// Edits a secret in an Azure Key Vault.
     Edit {
-        /// The URL to a secret in Azure Key Vault e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
+        /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
         #[arg(group = "ident")]
         id: Option<Url>,
 
-        /// The name of a secret in the `vault`.
+        /// The secret name.
         #[arg(short = 'n', long, group = "ident", requires = "vault")]
         name: Option<String>,
 
-        /// The host name of the Azure Key Vault e.g., "https://my-vault.vault.azure.net".
-        #[arg(long, conflicts_with = "id", requires = "name", env = VAULT_ENV_NAME)]
+        /// The vault URL e.g., "https://my-vault.vault.azure.net".
+        #[arg(long, env = VAULT_ENV_NAME)]
         vault: Option<Url>,
 
         /// The content type of the secret.
@@ -67,17 +67,26 @@ pub enum Commands {
 
     /// Gets information about a secret in an Azure Key Vault.
     Get {
-        /// The URL to a secret in Azure Key Vault e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
-        id: Url,
+        /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
+        #[arg(group = "ident")]
+        id: Option<Url>,
+
+        /// The secret name.
+        #[arg(short = 'n', long, group = "ident", requires = "vault")]
+        name: Option<String>,
+
+        /// The vault URL e.g., "https://my-vault.vault.azure.net".
+        #[arg(long, env = VAULT_ENV_NAME)]
+        vault: Option<Url>,
     },
 
     /// List secrets in an Azure Key Vault.
     List {
-        /// The host name of the Azure Key Vault e.g., "https://my-vault.vault.azure.net".
+        /// The vault URL e.g., "https://my-vault.vault.azure.net".
         #[arg(long, env = VAULT_ENV_NAME)]
         vault: Url,
 
-        /// List more details about each secret.
+        /// Show more details about each secret.
         #[arg(long)]
         long: bool,
     },
@@ -107,7 +116,7 @@ impl Commands {
 
         let current = Span::current();
         current.record("vault", vault.as_str());
-        current.record("name", secret.0.as_str());
+        current.record("name", &secret.0);
 
         let client = SecretClient::new(vault.as_str(), DefaultAzureCredential::new()?, None)?;
 
@@ -122,7 +131,7 @@ impl Commands {
         };
 
         let secret = client
-            .set_secret(secret.0.as_str(), params.try_into()?, None)
+            .set_secret(&secret.0, params.try_into()?, None)
             .await?
             .into_body()
             .await?;
@@ -130,7 +139,7 @@ impl Commands {
         show(&secret)
     }
 
-    #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name), err)]
+    #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
     async fn edit(&self) -> Result<()> {
         let Commands::Edit {
             id,
@@ -142,18 +151,12 @@ impl Commands {
         else {
             panic!("invalid command");
         };
-        let (vault, name, version) = match (id, vault, name) {
-            (Some(id), None, None) => {
-                let resource: ResourceId = id.try_into()?;
-                (resource.vault_url, resource.name, resource.version)
-            }
-            (None, Some(vault), Some(name)) => (vault.to_string(), name.to_owned(), None),
-            _ => panic!("invalid arguments"),
-        };
 
+        let (vault, name, version) = select(id.as_ref(), vault.as_ref(), name.as_ref())?;
         let current = Span::current();
         current.record("vault", vault.as_str());
         current.record("name", name.as_str());
+        current.record("version", version.as_deref());
 
         let client = SecretClient::new(vault.as_str(), DefaultAzureCredential::new()?, None)?;
 
@@ -183,20 +186,19 @@ impl Commands {
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
     async fn get(&self) -> Result<()> {
-        let Commands::Get { id } = self else {
+        let Commands::Get { id, name, vault } = self else {
             panic!("invalid command");
         };
-        let id: ResourceId = id.try_into()?;
 
+        let (vault, name, version) = select(id.as_ref(), vault.as_ref(), name.as_ref())?;
         let current = Span::current();
-        current.record("vault", id.vault_url.as_str());
-        current.record("name", id.name.as_str());
-        current.record("version", id.version.as_ref());
+        current.record("vault", &vault);
+        current.record("name", &name);
+        current.record("version", version.as_deref());
 
-        let client =
-            SecretClient::new(id.vault_url.as_str(), DefaultAzureCredential::new()?, None)?;
+        let client = SecretClient::new(&vault, DefaultAzureCredential::new()?, None)?;
         let secret = client
-            .get_secret(&id.name, id.version.as_deref().unwrap_or_default(), None)
+            .get_secret(&name, version.as_deref().unwrap_or_default(), None)
             .await?
             .into_body()
             .await?;
@@ -266,6 +268,24 @@ impl Commands {
         table.printstd();
 
         Ok(())
+    }
+}
+
+fn select(
+    id: Option<&Url>,
+    vault: Option<&Url>,
+    name: Option<&String>,
+) -> akv_cli::Result<(String, String, Option<String>)> {
+    match (id, vault, name) {
+        (Some(id), _, None) => {
+            let resource: ResourceId = id.try_into()?;
+            Ok((resource.vault_url, resource.name, resource.version))
+        }
+        (None, Some(vault), Some(name)) => Ok((vault.to_string(), name.to_owned(), None)),
+        _ => Err(akv_cli::Error::with_message(
+            ErrorKind::InvalidData,
+            "invalid arguments",
+        )),
     }
 }
 
