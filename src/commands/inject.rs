@@ -2,14 +2,18 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use super::VAULT_ENV_NAME;
-use akv_cli::{cache::ClientCache, get_secret, ErrorKind, Result};
+use akv_cli::{
+    cache::ClientCache,
+    parsing::{replace_expressions, replace_vars},
+    ErrorKind, Result,
+};
 use azure_core::Url;
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::Parser;
-use futures::{future::BoxFuture, FutureExt};
+use futures::FutureExt;
 use std::{
-    fs,
+    env, fs,
     io::{self, Read, Write},
     path::PathBuf,
     sync::Arc,
@@ -78,17 +82,32 @@ impl Args {
             )?))?;
         };
 
-        replace(&input, &mut output, |var| {
+        replace_expressions(&input, &mut output, |expr| {
             let mut cache = cache.clone();
             let credentials = credentials.clone();
+
             async move {
-                let id: ResourceId = var.parse()?;
+                tracing::debug!("replacing expression {expr}");
+
+                let id = replace_vars(expr, |var| {
+                    tracing::debug!("replacing variable ${var}");
+                    env::var(var).map_err(Into::into)
+                })?;
+
+                tracing::debug!("reading secret {id}");
+                let id: ResourceId = id.parse()?;
+
                 let client = cache.get(Arc::new(SecretClient::new(
                     &id.vault_url,
                     credentials.clone(),
                     None,
                 )?))?;
-                let secret = get_secret(&client, &id.name, id.version.as_deref()).await?;
+
+                let secret = client
+                    .get_secret(&id.name, id.version.as_deref().unwrap_or_default(), None)
+                    .await?
+                    .into_body()
+                    .await?;
 
                 Ok(secret.value.unwrap_or_else(String::new))
             }
@@ -96,97 +115,4 @@ impl Args {
         })
         .await
     }
-}
-
-async fn replace<W, F>(mut s: &str, w: &mut W, f: F) -> akv_cli::Result<()>
-where
-    W: io::Write,
-    F: Fn(&str) -> BoxFuture<'_, akv_cli::Result<String>>,
-{
-    while let Some(mut start) = s.find("{{") {
-        // Start only after the first "{{".
-        let Some(mut end) = s[start + 2..].find("}}") else {
-            return Err(akv_cli::Error::with_message(
-                ErrorKind::InvalidData,
-                "missing closing '}}'",
-            ));
-        };
-        end += start + 2;
-
-        w.write_all(s[..start].as_bytes())?;
-        start += 2;
-
-        let id = s[start..end].trim();
-        let secret = f(id).await?;
-
-        w.write_all(secret.as_bytes())?;
-        end += 2;
-
-        s = &s[end..];
-    }
-
-    w.write_all(s.as_bytes())?;
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_replace() {
-    let s = "Hello, {{ var }}!";
-    let mut buf = Vec::new();
-
-    replace(s, &mut buf, |v| {
-        assert_eq!(v, "var");
-        async { Ok(String::from("world")) }.boxed()
-    })
-    .await
-    .unwrap();
-    assert_eq!(String::from_utf8(buf).unwrap(), "Hello, world!");
-}
-
-#[tokio::test]
-async fn test_replace_overlap() {
-    let s = "Hello, {{ {{var}} }}!";
-    let mut buf = Vec::new();
-
-    replace(s, &mut buf, |v| {
-        assert_eq!(v, "{{var");
-        async { Ok(String::from("world")) }.boxed()
-    })
-    .await
-    .unwrap();
-    assert_eq!(String::from_utf8(buf).unwrap(), "Hello, world }}!");
-}
-
-#[tokio::test]
-async fn test_replace_missing_end() {
-    let s = "Hello, {{ var!";
-    let mut buf = Vec::new();
-
-    replace(s, &mut buf, |_| async { Ok(String::from("world")) }.boxed())
-        .await
-        .expect_err("missing end");
-}
-
-#[tokio::test]
-async fn test_replace_missing_empty() {
-    let s = "";
-    let mut buf = Vec::new();
-
-    replace(s, &mut buf, |_| async { Ok(String::from("world")) }.boxed())
-        .await
-        .unwrap();
-    assert_eq!(String::from_utf8(buf).unwrap(), "");
-}
-
-#[tokio::test]
-async fn test_replace_missing_no_template() {
-    let s = "Hello, world!";
-    let mut buf = Vec::new();
-
-    replace(s, &mut buf, |_| {
-        async { Ok(String::from("Ferris")) }.boxed()
-    })
-    .await
-    .unwrap();
-    assert_eq!(String::from_utf8(buf).unwrap(), "Hello, world!");
 }

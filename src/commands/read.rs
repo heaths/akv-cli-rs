@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use super::VAULT_ENV_NAME;
-use akv_cli::{get_secret, Result};
+use akv_cli::Result;
 use azure_core::Url;
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::SecretClient;
@@ -53,7 +53,11 @@ impl Args {
         current.record("version", version.as_deref());
 
         let client = SecretClient::new(&vault, DefaultAzureCredential::new()?, None)?;
-        let secret = get_secret(&client, &name, version.as_deref()).await?;
+        let secret = client
+            .get_secret(&name, version.as_deref().unwrap_or_default(), None)
+            .await?
+            .into_body()
+            .await?;
         if let Some(value) = secret.value {
             match self.out_file.as_ref() {
                 Some(path) => {
