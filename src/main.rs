@@ -30,6 +30,7 @@ async fn main() -> Result<()> {
         .with_env_filter(filter)
         .with_span_events(FmtSpan::NEW)
         .with_writer(std::io::stderr)
+        .without_time()
         .init();
 
     args.handle().await
