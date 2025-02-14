@@ -1,7 +1,7 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-mod item;
+mod secret;
 
 use akv_cli::{get_secret, Error, Result};
 use azure_core::Url;
@@ -19,11 +19,11 @@ const VAULT_ENV_NAME: &str = "AZURE_KEYVAULT_URL";
 pub enum Commands {
     /// Manage secrets in an Azure Key Vault.
     #[command(subcommand)]
-    Item(item::Commands),
+    Secret(secret::Commands),
 
     /// Read a secret from an Azure Key Vault.
     Read {
-        /// The URL to a secret in Azure Key Vault e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
+        /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
         id: Url,
 
         /// Do not print a new line after the secret.
@@ -35,7 +35,7 @@ pub enum Commands {
 impl Commands {
     pub async fn handle(&self) -> Result<()> {
         match self {
-            Commands::Item(items) => items.handle().await,
+            Commands::Secret(items) => items.handle().await,
             Commands::Read { .. } => self.read().await,
         }
     }
