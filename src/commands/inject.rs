@@ -11,7 +11,7 @@ use azure_core::Url;
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::Parser;
-use futures::FutureExt;
+use futures::FutureExt as _;
 use std::{
     env, fs,
     io::{self, Read, Write},
@@ -23,15 +23,15 @@ use tracing::Level;
 #[derive(Debug, Parser)]
 pub struct Args {
     /// The vault URL e.g., "https://my-vault.vault.azure.net". Allows for just secret names.
-    #[arg(long, env = VAULT_ENV_NAME)]
+    #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
     vault: Option<Url>,
 
     /// The filename of the template file to inject.
-    #[arg(short = 'i', long)]
+    #[arg(short = 'i', long, value_name = "PATH")]
     in_file: Option<PathBuf>,
 
     /// Write the secret to a file instead of stdout.
-    #[arg(short = 'o', long)]
+    #[arg(short = 'o', long, value_name = "PATH")]
     out_file: Option<PathBuf>,
 
     /// Force overwriting an existing file.
@@ -63,11 +63,13 @@ impl Args {
         let credentials = DefaultAzureCredential::new()?;
         let mut cache = ClientCache::new();
         if let Some(vault) = self.vault.as_ref() {
-            cache.get(Arc::new(SecretClient::new(
-                vault.as_str(),
-                credentials.clone(),
-                None,
-            )?))?;
+            cache
+                .get(Arc::new(SecretClient::new(
+                    vault.as_str(),
+                    credentials.clone(),
+                    None,
+                )?))
+                .await?;
         };
 
         let mut buf = Vec::new();
@@ -94,11 +96,13 @@ impl Args {
                 tracing::debug!("reading secret {id}");
                 let id: ResourceId = id.parse()?;
 
-                let client = cache.get(Arc::new(SecretClient::new(
-                    &id.vault_url,
-                    credentials.clone(),
-                    None,
-                )?))?;
+                let client = cache
+                    .get(Arc::new(SecretClient::new(
+                        &id.vault_url,
+                        credentials.clone(),
+                        None,
+                    )?))
+                    .await?;
 
                 let secret = client
                     .get_secret(&id.name, id.version.as_deref().unwrap_or_default(), None)

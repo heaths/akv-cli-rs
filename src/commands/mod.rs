@@ -3,6 +3,7 @@
 
 mod inject;
 mod read;
+mod run;
 mod secret;
 
 use akv_cli::{ErrorKind, Result};
@@ -24,6 +25,9 @@ pub enum Commands {
 
     /// Read a secret from Azure Key Vault.
     Read(read::Args),
+
+    /// Pass secrets in environment variables to a process.
+    Run(run::Args),
 }
 
 impl Commands {
@@ -32,6 +36,7 @@ impl Commands {
             Commands::Secret(command) => command.handle().await,
             Commands::Inject(args) => args.inject().await,
             Commands::Read(args) => args.read().await,
+            Commands::Run(args) => args.run().await,
         }
     }
 }

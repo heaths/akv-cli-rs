@@ -149,6 +149,18 @@ impl From<azure_core::Error> for Error {
     }
 }
 
+impl From<dotenvy::Error> for Error {
+    fn from(error: dotenvy::Error) -> Self {
+        Self::new(ErrorKind::Other, error)
+    }
+}
+
+impl From<tokio_util::codec::LinesCodecError> for Error {
+    fn from(error: tokio_util::codec::LinesCodecError) -> Self {
+        Self::new(ErrorKind::Io, error)
+    }
+}
+
 impl From<url::ParseError> for Error {
     fn from(error: url::ParseError) -> Self {
         Self::new(ErrorKind::InvalidData, error)

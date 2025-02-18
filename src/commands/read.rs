@@ -17,7 +17,7 @@ use tracing::{Level, Span};
 #[derive(Debug, Parser)]
 pub struct Args {
     /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
-    #[arg(group = "ident")]
+    #[arg(group = "ident", value_name = "URL")]
     id: Option<Url>,
 
     /// The secret name.
@@ -25,7 +25,7 @@ pub struct Args {
     name: Option<String>,
 
     /// The vault URL e.g., "https://my-vault.vault.azure.net".
-    #[arg(long, env = VAULT_ENV_NAME)]
+    #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
     vault: Option<Url>,
 
     /// Do not print a new line after the secret.
@@ -33,7 +33,7 @@ pub struct Args {
     no_newline: bool,
 
     /// Write the secret to a file instead of stdout.
-    #[arg(short = 'o', long)]
+    #[arg(short = 'o', long, value_name = "PATH")]
     out_file: Option<PathBuf>,
 
     /// Force overwriting an existing file.

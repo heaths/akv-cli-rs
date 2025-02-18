@@ -8,7 +8,7 @@ pub mod parsing;
 use async_stream::try_stream;
 use azure_security_keyvault_secrets::{models::SecretItem, SecretClient};
 pub use error::*;
-use futures::{Stream, StreamExt};
+use futures::{Stream, StreamExt as _};
 use std::pin::Pin;
 use tracing::Level;
 

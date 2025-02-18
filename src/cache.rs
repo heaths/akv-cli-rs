@@ -3,10 +3,8 @@
 
 use crate::ErrorKind;
 use azure_security_keyvault_secrets::SecretClient;
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
 
 #[derive(Clone, Default)]
 pub struct ClientCache {
@@ -19,7 +17,7 @@ impl ClientCache {
         Default::default()
     }
 
-    pub fn get(&mut self, client: Arc<SecretClient>) -> crate::Result<Arc<SecretClient>> {
+    pub async fn get(&mut self, client: Arc<SecretClient>) -> crate::Result<Arc<SecretClient>> {
         let endpoint = client
             .endpoint()
             .host_str()
@@ -28,10 +26,7 @@ impl ClientCache {
             })?
             .to_string();
 
-        let mut cache = self
-            .cache
-            .lock()
-            .map_err(|_| crate::Error::with_message(ErrorKind::Other, "failed to lock cache"))?;
+        let mut cache = self.cache.lock().await;
         if let Some(c) = cache.get(&endpoint) {
             tracing::debug!(
                 "found cached client for '{vault}'",
@@ -51,8 +46,8 @@ mod tests {
     use super::*;
     use azure_identity::DefaultAzureCredential;
 
-    #[test]
-    fn test_client_cache() {
+    #[tokio::test]
+    async fn test_client_cache() {
         let credential = DefaultAzureCredential::new().unwrap();
 
         let mut cache = ClientCache::new();
@@ -61,20 +56,23 @@ mod tests {
                 SecretClient::new("https://vault1.vault.azure.net", credential.clone(), None)
                     .unwrap(),
             ))
+            .await
             .expect("add first client");
         cache
             .get(Arc::new(
                 SecretClient::new("https://vault2.vault.azure.net", credential.clone(), None)
                     .unwrap(),
             ))
+            .await
             .expect("add first client");
         cache
             .get(Arc::new(
                 SecretClient::new("https://vault1.vault.azure.net/", credential.clone(), None)
                     .unwrap(),
             ))
+            .await
             .expect("add first client again");
 
-        assert_eq!(cache.cache.lock().unwrap().len(), 2);
+        assert_eq!(cache.cache.lock().await.len(), 2);
     }
 }
