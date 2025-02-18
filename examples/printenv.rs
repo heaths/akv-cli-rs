@@ -1,8 +1,11 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use colored::Colorize;
+use anstyle::{AnsiColor, Style};
 use std::env;
+
+const GREEN: Style = Style::new().fg_color(Some(anstyle::Color::Ansi(AnsiColor::Green)));
+const RED: Style = Style::new().fg_color(Some(anstyle::Color::Ansi(AnsiColor::Red)));
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -29,8 +32,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     vars.sort_by(|a, b| a.0.cmp(&b.0));
 
     // Interleave stdout and stderr for testing purposes.
-    let stdout_prefix = "stdout".green();
-    let stderr_prefix = "stderr".red();
+    let stdout_prefix = format!("{GREEN}stdout{GREEN:#}");
+    let stderr_prefix = format!("{RED}stderr{RED:#}");
 
     for (i, (key, value)) in vars.into_iter().enumerate() {
         let line = format!("{key}={value}");
