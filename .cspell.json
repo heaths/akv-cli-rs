@@ -22,6 +22,8 @@
     {
       "name": "crates",
       "words": [
+        "anstream",
+        "anstyle",
         "dotenvy",
         "reqwest",
         "prettytable",

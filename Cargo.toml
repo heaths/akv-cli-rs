@@ -28,6 +28,10 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 url = "2.5.4"
 
+[dev-dependencies]
+anstream = "0.6.18"
+anstyle = "1.0.10"
+
 [profile.release]
 opt-level = "s"
 panic = "abort"
@@ -36,6 +40,3 @@ strip = "debuginfo"
 [[bin]]
 name = "akv"
 path = "src/main.rs"
-
-[dev-dependencies]
-colored = "3.0.0"
