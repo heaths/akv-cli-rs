@@ -31,7 +31,7 @@ pub enum Commands {
         secret: (String, String),
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
-        #[arg(long, env = VAULT_ENV_NAME)]
+        #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Url,
 
         /// The content type of the secret.
@@ -47,7 +47,7 @@ pub enum Commands {
     /// Edits a secret in an Azure Key Vault.
     Edit {
         /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
-        #[arg(group = "ident")]
+        #[arg(group = "ident", value_name = "URL")]
         id: Option<Url>,
 
         /// The secret name.
@@ -55,7 +55,7 @@ pub enum Commands {
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
-        #[arg(long, env = VAULT_ENV_NAME)]
+        #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Option<Url>,
 
         /// The content type of the secret.
@@ -71,7 +71,7 @@ pub enum Commands {
     /// Gets information about a secret in an Azure Key Vault.
     Get {
         /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
-        #[arg(group = "ident")]
+        #[arg(group = "ident", value_name = "URL")]
         id: Option<Url>,
 
         /// The secret name.
@@ -79,14 +79,14 @@ pub enum Commands {
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
-        #[arg(long, env = VAULT_ENV_NAME)]
+        #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Option<Url>,
     },
 
     /// List secrets in an Azure Key Vault.
     List {
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
-        #[arg(long, env = VAULT_ENV_NAME)]
+        #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Url,
 
         /// Show more details about each secret.

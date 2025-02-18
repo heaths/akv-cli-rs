@@ -62,6 +62,20 @@ It's often important to refer to a specific version until you're ready to rotate
 akv read https://my-vault.vault.azure.net/secrets/my-secret/746984e474594896aad9aff48aca0849
 ```
 
+### Passing secrets to new processes
+
+You can start a process that reads environment variables containing URLs to secrets instead of keeping secrets in environment variables that any process can read.
+
+Environment variables can contain only a URL to a secret.
+Secrets read from Azure Key Vault will be masked in stdout and stderr unless you pass `--no-masking`.
+
+```bash
+export SECRET_VAR=https://my-vault.vault.azure.net/secrets/my-secret
+
+akv run -- printenv SECRET_VAR
+akv run --no-masking -- printenv SECRET_VAR
+```
+
 ### Managing secrets
 
 You can create, get, edit, and list secrets e.g.,

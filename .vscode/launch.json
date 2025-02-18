@@ -4,7 +4,7 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "tests",
+      "name": "Tests",
       "cargo": {
         "args": [
           "test",
@@ -19,7 +19,7 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "executable",
+      "name": "Run (with masking)",
       "cargo": {
         "args": [
           "build",
@@ -31,8 +31,10 @@
         }
       },
       "args": [
-        "item",
-        "list"
+        "run",
+        "--",
+        "printenv",
+        "AZURE_KEYVAULT_URL"
       ],
       "cwd": "${workspaceFolder}",
       "envFile": ".azure/dev/.env"
