@@ -34,12 +34,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Interleave stdout and stderr for testing purposes.
     let stdout_prefix = format!("{GREEN}stdout{GREEN:#}");
     let stderr_prefix = format!("{RED}stderr{RED:#}");
+    let padding = vars.len().to_string().len();
 
     for (i, (key, value)) in vars.into_iter().enumerate() {
         let line = format!("{key}={value}");
         match i % 2 {
-            0 => println!("{stdout_prefix}: {line}"),
-            _ => eprintln!("{stderr_prefix}: {line}"),
+            0 => println!("{stdout_prefix} {:>padding$}: {line}", i + 1),
+            _ => eprintln!("{stderr_prefix} {:>padding$}: {line}", i + 1),
         }
     }
 
