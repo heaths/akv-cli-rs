@@ -9,6 +9,7 @@ use futures::StreamExt as _;
 use std::{
     collections::HashMap,
     env,
+    io::{self, Write},
     path::PathBuf,
     process::{exit, Stdio},
     sync::Arc,
@@ -102,7 +103,6 @@ impl Args {
             .values()
             .map(ToOwned::to_owned)
             .collect();
-        let mask = |line: &str| -> String { mask_secrets(line, &secrets) };
 
         let mut args = self.args.iter();
         let mut cmd = Command::new(args.next().ok_or_else(|| {
@@ -120,8 +120,10 @@ impl Args {
         }
 
         // Otherwise, capture stdout, stderr and mask any instances of cached secrets.
+        let (tx, rx) = std::sync::mpsc::channel::<TaggedLine>();
         let mut process = cmd
             .args(args)
+            .stdin(Stdio::inherit())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
@@ -131,40 +133,84 @@ impl Args {
                 akv_cli::Error::with_message(ErrorKind::Other, "failed to redirect stdout")
             })?,
             LinesCodec::new(),
-        )
-        .fuse();
+        );
+        let stdout_tx = tx.clone();
+        let stdout_fut = tokio::spawn(async move {
+            while let Some(line) = stdout.next().await {
+                if let Ok(line) = line {
+                    #[allow(unused_must_use)]
+                    stdout_tx.send(TaggedLine::stdio(line));
+                }
+            }
+        });
         let mut stderr = FramedRead::new(
             process.stderr.take().ok_or_else(|| {
                 akv_cli::Error::with_message(ErrorKind::Other, "failed to redirect stderr")
             })?,
             LinesCodec::new(),
-        )
-        .fuse();
-
-        loop {
-            tokio::select! {
-                line = stdout.next() => {
-                    if let Some(Ok(line)) = line {
-                        let line = mask(&line);
-                        println!("{}", line);
-                    }
-                },
-                line = stderr.next() => {
-                    if let Some(Ok(line)) = line {
-                        let line = mask(&line);
-                        eprintln!("{}", line);
-                    }
+        );
+        let stderr_tx = tx.clone();
+        let stderr_fut = tokio::spawn(async move {
+            while let Some(line) = stderr.next().await {
+                if let Ok(line) = line {
+                    #[allow(unused_must_use)]
+                    stderr_tx.send(TaggedLine::stderr(line));
                 }
-                result = process.wait() => {
-                    if let Some(code) = result?.code() {
-                        exit(code);
-                    }
+            }
+        });
+        drop(tx);
 
-                    return Ok(());
+        let mut stdout = io::stdout();
+        let mut stderr = io::stderr();
+        for tagged_line in rx.iter() {
+            let masked = mask_secrets(&tagged_line.line, &secrets);
+            match tagged_line.tag {
+                Tag::Stdout => {
+                    stdout.write_all(masked.as_bytes())?;
+                    stdout.flush()?;
+                }
+                Tag::Stderr => {
+                    stderr.write_all(masked.as_bytes())?;
+                    stderr.flush()?;
                 }
             }
         }
+
+        let (status, _, _) = tokio::join!(process.wait(), stdout_fut, stderr_fut);
+        if let Some(code) = status?.code() {
+            exit(code);
+        }
+
+        return Ok(());
     }
+}
+
+#[derive(Debug)]
+struct TaggedLine {
+    tag: Tag,
+    line: String,
+}
+
+impl TaggedLine {
+    fn stdio(line: String) -> Self {
+        Self {
+            tag: Tag::Stdout,
+            line,
+        }
+    }
+
+    fn stderr(line: String) -> Self {
+        Self {
+            tag: Tag::Stderr,
+            line,
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Tag {
+    Stdout,
+    Stderr,
 }
 
 fn mask_secrets(line: &str, secrets: &Vec<String>) -> String {
@@ -172,5 +218,5 @@ fn mask_secrets(line: &str, secrets: &Vec<String>) -> String {
     for secret in secrets {
         masked = masked.replace(secret, MASK);
     }
-    masked
+    masked + "\n"
 }
