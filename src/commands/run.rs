@@ -95,6 +95,15 @@ impl Args {
             secrets.insert(value, secret);
         }
 
+        // Copy the values for faster access.
+        let secrets: Vec<String> = secrets
+            .lock()
+            .await
+            .values()
+            .map(ToOwned::to_owned)
+            .collect();
+        let mask = |line: &str| -> String { mask_secrets(line, &secrets) };
+
         let mut args = self.args.iter();
         let mut cmd = Command::new(args.next().ok_or_else(|| {
             akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
@@ -132,26 +141,17 @@ impl Args {
         )
         .fuse();
 
-        // Copy the values for faster access.
-        let values: Vec<String> = secrets
-            .lock()
-            .await
-            .values()
-            .map(ToOwned::to_owned)
-            .collect();
-        let mask = |line: &str| -> String { mask_secrets(line, &values) };
-
         loop {
             tokio::select! {
                 line = stdout.next() => {
-                    if let Some(line) = line {
-                        let line = mask(&line?);
+                    if let Some(Ok(line)) = line {
+                        let line = mask(&line);
                         println!("{}", line);
                     }
                 },
                 line = stderr.next() => {
-                    if let Some(line) = line {
-                        let line = mask(&line?);
+                    if let Some(Ok(line)) = line {
+                        let line = mask(&line);
                         eprintln!("{}", line);
                     }
                 }
