@@ -2,24 +2,23 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use anstyle::{AnsiColor, Style};
-use std::env;
+use clap::Parser;
+use std::{env, time::Duration};
+use tokio::time::sleep;
 
 const GREEN: Style = Style::new().fg_color(Some(anstyle::Color::Ansi(AnsiColor::Green)));
 const RED: Style = Style::new().fg_color(Some(anstyle::Color::Ansi(AnsiColor::Red)));
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = env::args_os().skip(1);
-    let mut vars: Vec<(String, String)> = if args.len() == 0 {
+    let args = Args::parse();
+    let mut vars: Vec<(String, String)> = if args.vars.is_empty() {
         env::vars_os()
             .filter_map(|(k, v)| Some((k.into_string().ok()?, v.into_string().ok()?)))
             .collect()
     } else {
         let mut vars = Vec::new();
-        for k in args {
-            let Some(k) = k.into_string().ok() else {
-                continue;
-            };
+        for k in args.vars {
             let Some(v) = env::var(&k).ok() else {
                 continue;
             };
@@ -37,6 +36,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let padding = vars.len().to_string().len();
 
     for (i, (key, value)) in vars.into_iter().enumerate() {
+        if let Some(delay) = args.delay {
+            sleep(Duration::from_millis(delay)).await;
+        }
+
         let line = format!("{key}={value}");
         match i % 2 {
             0 => println!("{stdout_prefix} {:>padding$}: {line}", i + 1),
@@ -45,4 +48,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+#[derive(Debug, Parser)]
+struct Args {
+    /// Number of milliseconds to delay between printing lines.
+    #[arg(long)]
+    delay: Option<u64>,
+
+    /// Optional variable names to print.
+    #[arg(value_name = "VARIABLES", trailing_var_arg = true)]
+    vars: Vec<String>,
 }
