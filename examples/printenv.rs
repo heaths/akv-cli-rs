@@ -42,8 +42,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let line = format!("{key}={value}");
         match i % 2 {
-            0 => println!("{stdout_prefix} {:>padding$}: {line}", i + 1),
-            _ => eprintln!("{stderr_prefix} {:>padding$}: {line}", i + 1),
+            0 => anstream::println!("{stdout_prefix} {:>padding$}: {line}", i + 1),
+            _ => anstream::eprintln!("{stderr_prefix} {:>padding$}: {line}", i + 1),
         }
     }
 
