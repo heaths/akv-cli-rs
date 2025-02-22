@@ -2,8 +2,12 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use anstyle::{AnsiColor, Style};
-use clap::Parser;
-use std::{env, time::Duration};
+use clap::{ColorChoice, Parser};
+use std::{
+    env,
+    io::{self, Write},
+    time::Duration,
+};
 use tokio::time::sleep;
 
 const GREEN: Style = Style::new().fg_color(Some(anstyle::Color::Ansi(AnsiColor::Green)));
@@ -18,11 +22,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .collect()
     } else {
         let mut vars = Vec::new();
-        for k in args.vars {
-            let Some(v) = env::var(&k).ok() else {
+        for k in &args.vars {
+            let Some(v) = env::var(k).ok() else {
                 continue;
             };
-            vars.push((k, v));
+            vars.push((k.clone(), v));
         }
         vars
     };
@@ -35,6 +39,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stderr_prefix = format!("{RED}stderr{RED:#}");
     let padding = vars.len().to_string().len();
 
+    let mut stdout = anstream::AutoStream::new(io::stdout(), args.color());
+    let mut stderr = anstream::AutoStream::new(io::stderr(), args.color());
+
     for (i, (key, value)) in vars.into_iter().enumerate() {
         if let Some(delay) = args.delay {
             sleep(Duration::from_millis(delay)).await;
@@ -42,8 +49,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let line = format!("{key}={value}");
         match i % 2 {
-            0 => anstream::println!("{stdout_prefix} {:>padding$}: {line}", i + 1),
-            _ => anstream::eprintln!("{stderr_prefix} {:>padding$}: {line}", i + 1),
+            0 => writeln!(stdout, "{stdout_prefix} {:>padding$}: {line}", i + 1)?,
+            _ => writeln!(stderr, "{stderr_prefix} {:>padding$}: {line}", i + 1)?,
         }
     }
 
@@ -52,6 +59,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[derive(Debug, Parser)]
 struct Args {
+    /// Print colors.
+    #[arg(short = 'c', long, default_value_t)]
+    color: ColorChoice,
+
     /// Number of milliseconds to delay between printing lines.
     #[arg(long)]
     delay: Option<u64>,
@@ -59,4 +70,14 @@ struct Args {
     /// Optional variable names to print.
     #[arg(value_name = "VARIABLES", trailing_var_arg = true)]
     vars: Vec<String>,
+}
+
+impl Args {
+    fn color(&self) -> anstream::ColorChoice {
+        match self.color {
+            ColorChoice::Always => anstream::ColorChoice::Always,
+            ColorChoice::Auto => anstream::ColorChoice::Auto,
+            ColorChoice::Never => anstream::ColorChoice::Never,
+        }
+    }
 }
