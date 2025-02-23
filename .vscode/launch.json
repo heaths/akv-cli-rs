@@ -33,8 +33,9 @@
       "args": [
         "run",
         "--",
-        "printenv",
-        "AZURE_KEYVAULT_URL"
+        "cargo",
+        "run",
+        "--example=printenv"
       ],
       "cwd": "${workspaceFolder}",
       "envFile": ".azure/dev/.env"
