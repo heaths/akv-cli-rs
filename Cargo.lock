@@ -41,6 +41,7 @@ dependencies = [
  "dotenvy",
  "futures",
  "prettytable-rs",
+ "pty-process",
  "time",
  "timeago",
  "tokio",
@@ -1672,6 +1673,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "pty-process"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8277b026e63da5d2cc435f842b52bedb1d050dfd7d633bba009c3c8e1883a21e"
+dependencies = [
+ "rustix",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1871,6 +1881,7 @@ checksum = "fdb5bc1ae2baa591800df16c9ca78619bf65c0488b41b96ccec5d11220d8c154"
 dependencies = [
  "bitflags",
  "errno",
+ "itoa",
  "libc",
  "linux-raw-sys",
  "windows-sys 0.59.0",
