@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
 }
 
 #[derive(Debug, Parser)]
-#[command(about, long_about = None, version)]
+#[command(name = env!("CARGO_BIN_NAME"), about, long_about = None, version)]
 struct Args {
     #[command(subcommand)]
     command: Commands,

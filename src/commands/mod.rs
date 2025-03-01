@@ -8,8 +8,9 @@ mod secret;
 
 use akv_cli::{ErrorKind, Result};
 use azure_security_keyvault_secrets::ResourceId;
-use clap::Subcommand;
-use std::borrow::Cow;
+use clap::{CommandFactory, Subcommand};
+use clap_complete::{generate, Shell};
+use std::{borrow::Cow, io};
 use url::Url;
 
 const VAULT_ENV_NAME: &str = "AZURE_KEYVAULT_URL";
@@ -28,6 +29,13 @@ pub enum Commands {
 
     /// Pass secrets in environment variables to a process.
     Run(run::Args),
+
+    /// Generates completion scripts for supported shells.
+    Completion {
+        /// The shell script to generate.
+        #[arg(value_enum)]
+        shell: Shell,
+    },
 }
 
 impl Commands {
@@ -37,6 +45,12 @@ impl Commands {
             Commands::Inject(args) => args.inject().await,
             Commands::Read(args) => args.read().await,
             Commands::Run(args) => args.run().await,
+            Commands::Completion { shell } => {
+                let mut cmd = super::Args::command();
+                let bin_name = cmd.get_name().to_string();
+                generate(*shell, &mut cmd, bin_name, &mut io::stdout());
+                Ok(())
+            }
         }
     }
 }
