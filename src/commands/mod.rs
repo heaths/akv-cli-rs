@@ -3,6 +3,7 @@
 
 mod inject;
 mod read;
+#[cfg(not(target_family = "wasm"))]
 mod run;
 mod secret;
 
@@ -28,6 +29,7 @@ pub enum Commands {
     Read(read::Args),
 
     /// Pass secrets in environment variables to a process.
+    #[cfg(not(target_family = "wasm"))]
     Run(run::Args),
 
     /// Generates completion scripts for supported shells.
@@ -44,6 +46,7 @@ impl Commands {
             Commands::Secret(command) => command.handle().await,
             Commands::Inject(args) => args.inject().await,
             Commands::Read(args) => args.read().await,
+            #[cfg(not(target_arch = "wasm32"))]
             Commands::Run(args) => args.run().await,
             Commands::Completion { shell } => {
                 let mut cmd = super::Args::command();

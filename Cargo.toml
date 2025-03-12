@@ -26,13 +26,15 @@ timeago = "0.4.2"
 tokio = { version = "1.43.0", features = [
     "io-std",
     "macros",
-    "process",
     "rt",
 ] }
 tokio-util = { version = "0.7.13", features = ["codec"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 url = "2.5.4"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+tokio = { version = "1.43.0", features = ["process"] }
 
 [dev-dependencies]
 anstream = "0.6.18"
