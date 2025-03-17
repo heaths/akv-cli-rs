@@ -105,9 +105,10 @@ impl Args {
             .collect();
 
         let mut args = self.args.iter();
-        let mut cmd = Command::new(args.next().ok_or_else(|| {
+        let program = args.next().ok_or_else(|| {
             akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
-        })?);
+        })?;
+        let mut cmd = Command::new(program);
 
         // Write directly to stdout, stderr if not masking.
         if self.no_masking {
@@ -134,12 +135,14 @@ impl Args {
             })?,
             LinesCodec::new(),
         );
-        let stdout_tx = tx.clone();
-        let stdout_fut = tokio::spawn(async move {
-            while let Some(line) = stdout.next().await {
-                if let Ok(line) = line {
-                    #[allow(unused_must_use)]
-                    stdout_tx.send(TaggedLine::stdio(line));
+        let stdout_fut = tokio::spawn({
+            let tx = tx.clone();
+            async move {
+                while let Some(line) = stdout.next().await {
+                    if let Ok(line) = line {
+                        #[allow(unused_must_use)]
+                        tx.send(TaggedLine::stdio(line));
+                    }
                 }
             }
         });
@@ -149,12 +152,14 @@ impl Args {
             })?,
             LinesCodec::new(),
         );
-        let stderr_tx = tx.clone();
-        let stderr_fut = tokio::spawn(async move {
-            while let Some(line) = stderr.next().await {
-                if let Ok(line) = line {
-                    #[allow(unused_must_use)]
-                    stderr_tx.send(TaggedLine::stderr(line));
+        let stderr_fut = tokio::spawn({
+            let tx = tx.clone();
+            async move {
+                while let Some(line) = stderr.next().await {
+                    if let Ok(line) = line {
+                        #[allow(unused_must_use)]
+                        tx.send(TaggedLine::stderr(line));
+                    }
                 }
             }
         });
