@@ -102,14 +102,14 @@ impl Args {
             .map(ToOwned::to_owned)
             .collect();
 
-        let mut args = self.args.iter();
-        let program = args.next().ok_or_else(|| {
-            akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
-        })?;
-        let mut cmd = Command::new(program);
-
         // Write directly to stdout, stderr if not masking.
         if self.no_masking {
+            let mut args = self.args.iter();
+            let program = args.next().ok_or_else(|| {
+                akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
+            })?;
+            let mut cmd = Command::new(program);
+
             let mut process = cmd.args(args).spawn()?;
             if let Some(code) = process.wait().await?.code() {
                 exit(code);
@@ -122,7 +122,10 @@ impl Args {
             pty_process::blocking::open().map_err(|err| akv_cli::Error::new(ErrorKind::Io, err))?;
 
         let mut args = self.args.iter();
-        let mut process = pty_process::blocking::Command::new(args.next().unwrap())
+        let program = args.next().ok_or_else(|| {
+            akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
+        })?;
+        let mut process = pty_process::blocking::Command::new(program)
             .args(args)
             .spawn(pts)
             .map_err(|err| akv_cli::Error::new(ErrorKind::Io, err))?;
