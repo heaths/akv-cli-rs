@@ -8,7 +8,7 @@ use clap::Parser;
 use std::{
     collections::HashMap,
     env,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader, IsTerminal as _},
     path::PathBuf,
     process::exit,
     sync::Arc,
@@ -121,9 +121,21 @@ impl Args {
         let (pty, pts) =
             pty_process::blocking::open().map_err(|err| akv_cli::Error::new(ErrorKind::Io, err))?;
 
-        let mut process = pty_process::blocking::Command::new("/bin/sh")
-            .arg("-c")
-            .arg(self.args.join(" "))
+        let mut args = self.args.iter();
+        let program = args.next().ok_or_else(|| {
+            akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
+        })?;
+        let mut cmd = pty_process::blocking::Command::new(program).args(args);
+
+        // If stdout or stderr is already redirected, redirect the same streams for the PTY.
+        if !std::io::stdout().is_terminal() {
+            cmd = cmd.stdout(std::io::stdout());
+        }
+        if !std::io::stderr().is_terminal() {
+            cmd = cmd.stderr(std::io::stderr());
+        }
+
+        let mut process = cmd
             .spawn(pts)
             .map_err(|err| akv_cli::Error::new(ErrorKind::Io, err))?;
         let reader = BufReader::new(pty);
