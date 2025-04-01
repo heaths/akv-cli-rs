@@ -155,12 +155,6 @@ impl From<dotenvy::Error> for Error {
     }
 }
 
-impl From<tokio_util::codec::LinesCodecError> for Error {
-    fn from(error: tokio_util::codec::LinesCodecError) -> Self {
-        Self::new(ErrorKind::Io, error)
-    }
-}
-
 impl From<url::ParseError> for Error {
     fn from(error: url::ParseError) -> Self {
         Self::new(ErrorKind::InvalidData, error)
