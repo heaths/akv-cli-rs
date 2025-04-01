@@ -45,7 +45,6 @@ dependencies = [
  "time",
  "timeago",
  "tokio",
- "tokio-util",
  "tracing",
  "tracing-subscriber",
  "url",
