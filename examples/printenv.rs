@@ -35,10 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     vars.sort_by(|a, b| a.0.cmp(&b.0));
 
     // Interleave stdout and stderr for testing purposes.
-    let stdout_prefix = format!("{GREEN}stdout{GREEN:#}");
-    let stderr_prefix = format!("{RED}stderr{RED:#}");
     let padding = vars.len().to_string().len();
-
     let mut stdout = anstream::AutoStream::new(io::stdout(), args.color());
     let mut stderr = anstream::AutoStream::new(io::stderr(), args.color());
 
@@ -49,8 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let line = format!("{key}={value}");
         match i % 2 {
-            0 => writeln!(stdout, "{stdout_prefix} {:>padding$}: {line}", i + 1)?,
-            _ => writeln!(stderr, "{stderr_prefix} {:>padding$}: {line}", i + 1)?,
+            0 => writeln!(stdout, "{GREEN}stdout {:>padding$}{GREEN:#}: {line}", i + 1)?,
+            _ => writeln!(stderr, "{RED}stderr {:>padding$}{RED:#}: {line}", i + 1)?,
         }
     }
 
