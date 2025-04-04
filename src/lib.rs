@@ -4,6 +4,7 @@
 pub mod cache;
 mod error;
 pub mod parsing;
+pub mod pty;
 
 use async_stream::try_stream;
 use azure_security_keyvault_secrets::{models::SecretItem, SecretClient};

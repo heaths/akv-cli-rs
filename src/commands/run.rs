@@ -1,19 +1,19 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use akv_cli::{cache::ClientCache, ErrorKind, Result};
+use akv_cli::{cache::ClientCache, pty, ErrorKind, Result};
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::Parser;
 use std::{
     collections::HashMap,
     env,
-    io::{BufRead, BufReader, IsTerminal as _},
+    io::{self, BufRead, BufReader, IsTerminal as _},
     path::PathBuf,
-    process::exit,
+    process::{exit, Command, Stdio},
     sync::Arc,
 };
-use tokio::{process::Command, sync::Mutex};
+use tokio::sync::Mutex;
 use tracing::Level;
 
 const MASK: &str = "<concealed by akv>";
@@ -109,34 +109,32 @@ impl Args {
                 akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
             })?;
             let mut cmd = Command::new(program);
-
             let mut process = cmd.args(args).spawn()?;
-            if let Some(code) = process.wait().await?.code() {
+            if let Some(code) = process.wait()?.code() {
                 exit(code);
             }
 
             return Ok(());
         }
 
-        let (pty, pts) =
-            pty_process::blocking::open().map_err(|err| akv_cli::Error::new(ErrorKind::Io, err))?;
-
+        let (pty, ref pts) = pty::open()?;
         let mut args = self.args.iter();
         let program = args.next().ok_or_else(|| {
             akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
         })?;
-        let mut cmd = pty_process::blocking::Command::new(program).args(args);
+        let mut cmd = Command::new(program);
+        cmd.args(args);
 
         // If stdout or stderr is already redirected, redirect the same streams for the PTY.
-        if !std::io::stdout().is_terminal() {
-            cmd = cmd.stdout(std::io::stdout());
+        if io::stdout().is_terminal() {
+            cmd.stdout::<Stdio>(pts.try_into()?);
         }
-        if !std::io::stderr().is_terminal() {
-            cmd = cmd.stderr(std::io::stderr());
+        if io::stderr().is_terminal() {
+            cmd.stderr::<Stdio>(pts.try_into()?);
         }
 
         let mut process = cmd
-            .spawn(pts)
+            .spawn()
             .map_err(|err| akv_cli::Error::new(ErrorKind::Io, err))?;
         let reader = BufReader::new(pty);
         let mut lines = reader.lines();
@@ -145,8 +143,7 @@ impl Args {
             println!("{masked}");
         }
 
-        let status = process.wait()?;
-        if let Some(code) = status.code() {
+        if let Some(code) = process.wait()?.code() {
             exit(code);
         }
 
