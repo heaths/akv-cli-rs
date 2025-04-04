@@ -2,17 +2,17 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 // cspell:disable
-use crate::{Error, ErrorKind, Result};
-use libc::openpty;
+use crate::Result;
+use libc::{fcntl, openpty, F_GETFL, F_SETFL, O_NONBLOCK};
 use std::{
     io::{self, Read},
-    os::fd::{AsRawFd, FromRawFd, OwnedFd},
+    os::fd::{AsRawFd, BorrowedFd, FromRawFd, OwnedFd},
     process::Stdio,
     ptr,
 };
 
 /// Open a pseudoterminal.
-pub fn open() -> Result<(Pty, Pts)> {
+pub fn open<'a>() -> Result<(Pty<'a>, Pts)> {
     let mut pty = 0;
     let mut pts = 0;
     unsafe {
@@ -24,14 +24,18 @@ pub fn open() -> Result<(Pty, Pts)> {
             ptr::null_mut(),
         );
         if ret != 0 {
-            return Err(Error::new(
-                ErrorKind::Io,
-                format!("failed to open pty: {ret}"),
-            ));
+            Err(io::Error::last_os_error())?;
+        }
+
+        let mut flags = fcntl(pty, F_GETFL);
+        flags |= O_NONBLOCK;
+        let ret = fcntl(pty, F_SETFL, flags);
+        if ret != 0 {
+            Err(io::Error::last_os_error())?;
         }
 
         Ok((
-            Pty(OwnedFd::from_raw_fd(pty)),
+            Pty::Owned(OwnedFd::from_raw_fd(pty)),
             Pts(OwnedFd::from_raw_fd(pts)),
         ))
     }
@@ -39,20 +43,43 @@ pub fn open() -> Result<(Pty, Pts)> {
 
 /// A pseudoterminal.
 #[derive(Debug)]
-pub struct Pty(OwnedFd);
+pub enum Pty<'a> {
+    Owned(OwnedFd),
+    Borrowed(BorrowedFd<'a>),
+}
 
-impl Read for Pty {
+impl AsRawFd for Pty<'_> {
+    fn as_raw_fd(&self) -> std::os::fd::RawFd {
+        match self {
+            Self::Owned(fd) => fd.as_raw_fd(),
+            Self::Borrowed(fd) => fd.as_raw_fd(),
+        }
+    }
+}
+
+impl Clone for Pty<'_> {
+    fn clone(&self) -> Self {
+        unsafe { Self::Borrowed(BorrowedFd::borrow_raw(self.as_raw_fd())) }
+    }
+}
+
+impl Read for Pty<'_> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let len = unsafe {
             libc::read(
-                self.0.as_raw_fd(),
+                self.as_raw_fd(),
                 buf.as_mut_ptr() as *mut libc::c_void,
                 buf.len(),
             )
         };
 
         if len == -1 {
-            return Err(io::Error::last_os_error());
+            let err = io::Error::last_os_error();
+            if let Some(libc::EBADF) = err.raw_os_error() {
+                return Ok(0);
+            }
+
+            return Err(err);
         }
 
         Ok(len as usize)
