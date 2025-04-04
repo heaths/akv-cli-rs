@@ -3,72 +3,37 @@
 
 // cspell:disable
 use crate::{Error, ErrorKind, Result};
-use libc::{fcntl, grantpt, posix_openpt, unlockpt, F_GETFD, F_SETFD, O_CLOEXEC, O_NOCTTY, O_RDWR};
+use libc::openpty;
 use std::{
-    ffi::CString,
-    fs::OpenOptions,
     io::{self, Read},
-    os::{
-        fd::{AsRawFd, FromRawFd, OwnedFd},
-        unix::fs::OpenOptionsExt,
-    },
+    os::fd::{AsRawFd, FromRawFd, OwnedFd},
     process::Stdio,
+    ptr,
 };
 
 /// Open a pseudoterminal.
 pub fn open() -> Result<(Pty, Pts)> {
+    let mut pty = 0;
+    let mut pts = 0;
     unsafe {
-        let pty = posix_openpt(O_RDWR | O_NOCTTY);
-        if pty == -1 {
-            return Err(Error::new(
-                ErrorKind::Io,
-                format!("failed to open pty: {pty}"),
-            ));
-        }
-
-        let ret = grantpt(pty);
+        let ret = openpty(
+            &mut pty,
+            &mut pts,
+            ptr::null_mut(),
+            ptr::null_mut(),
+            ptr::null_mut(),
+        );
         if ret != 0 {
             return Err(Error::new(
                 ErrorKind::Io,
-                format!("failed to grant access to pty: {ret}"),
+                format!("failed to open pty: {ret}"),
             ));
         }
 
-        let ret = unlockpt(pty);
-        if ret != 0 {
-            return Err(Error::new(
-                ErrorKind::Io,
-                format!("failed to unlock pty: {ret}"),
-            ));
-        }
-
-        let mut flags = fcntl(pty, F_GETFD);
-        flags |= O_CLOEXEC;
-        let ret = fcntl(pty, F_SETFD, flags);
-        if ret != 0 {
-            return Err(Error::new(
-                ErrorKind::Io,
-                format!("failed to update pty: {ret}"),
-            ));
-        }
-
-        let ptsname = libc::ptsname(pty);
-        if ptsname.is_null() {
-            return Err(Error::new(ErrorKind::Io, "failed to get pty name"));
-        }
-
-        let ptsname: CString = CString::from_raw(ptsname);
-        let ptsname = ptsname
-            .into_string()
-            .map_err(|err| Error::new(ErrorKind::Io, err))?;
-        let pts: OwnedFd = OpenOptions::new()
-            // .read(true)
-            .write(true)
-            .custom_flags(O_NOCTTY)
-            .open(ptsname)?
-            .into();
-
-        Ok((Pty(OwnedFd::from_raw_fd(pty)), Pts(pts)))
+        Ok((
+            Pty(OwnedFd::from_raw_fd(pty)),
+            Pts(OwnedFd::from_raw_fd(pts)),
+        ))
     }
 }
 
@@ -78,14 +43,19 @@ pub struct Pty(OwnedFd);
 
 impl Read for Pty {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        unsafe {
-            let len = libc::read(self.0.as_raw_fd(), buf.as_mut_ptr().cast(), buf.len());
-            if len == -1 {
-                return Err(io::Error::last_os_error());
-            }
+        let len = unsafe {
+            libc::read(
+                self.0.as_raw_fd(),
+                buf.as_mut_ptr() as *mut libc::c_void,
+                buf.len(),
+            )
+        };
 
-            Ok(len as usize)
+        if len == -1 {
+            return Err(io::Error::last_os_error());
         }
+
+        Ok(len as usize)
     }
 }
 
