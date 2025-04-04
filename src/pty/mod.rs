@@ -8,12 +8,19 @@ mod windows;
 #[cfg(not(windows))]
 use posix as inner;
 use std::{
+    fmt,
     io::{self, IsTerminal, Read},
     process::{Child, Command, Stdio},
 };
 
-#[derive(Debug)]
 pub struct Pty(inner::Pty);
+
+impl fmt::Debug for Pty {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Format the inner directly instead of in a tuple.
+        self.0.fmt(f)
+    }
+}
 
 impl Read for Pty {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
