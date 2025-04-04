@@ -13,16 +13,17 @@ use std::{
     process::{Child, Command, Stdio},
 };
 
-pub struct Pty(inner::Pty);
+#[derive(Clone)]
+pub struct Pty<'a>(inner::Pty<'a>);
 
-impl fmt::Debug for Pty {
+impl fmt::Debug for Pty<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Format the inner directly instead of in a tuple.
         self.0.fmt(f)
     }
 }
 
-impl Read for Pty {
+impl Read for Pty<'_> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.0.read(buf)
     }
@@ -30,12 +31,12 @@ impl Read for Pty {
 
 pub trait CommandExt: __private::Sealed {
     type Output;
-    fn spawn_pty(&mut self) -> crate::Result<(Self::Output, Pty)>;
+    fn spawn_pty<'a>(&mut self) -> crate::Result<(Self::Output, Pty<'a>)>;
 }
 
 impl CommandExt for Command {
     type Output = Child;
-    fn spawn_pty(&mut self) -> crate::Result<(Self::Output, Pty)> {
+    fn spawn_pty<'a>(&mut self) -> crate::Result<(Self::Output, Pty<'a>)> {
         #[cfg(not(windows))]
         {
             let (pty, ref pts) = posix::open()?;

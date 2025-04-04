@@ -125,21 +125,27 @@ impl Args {
         cmd.args(args);
 
         let (mut process, pty) = cmd.spawn_pty()?;
-        tokio::spawn(async move {
-            let reader = BufReader::new(pty);
-            let lines = reader.lines();
-            for line in lines {
-                let Ok(line) = line else {
-                    continue;
-                };
+        let pipe = tokio::spawn({
+            let pty = pty.clone();
+            async move {
+                let reader = BufReader::new(pty);
+                let lines = reader.lines().fuse();
+                for line in lines {
+                    let Ok(line) = line else {
+                        continue;
+                    };
 
-                let masked = mask_secrets(&line, &secrets);
-                println!("{masked}");
+                    let masked = mask_secrets(&line, &secrets);
+                    println!("{masked}");
+                }
             }
         });
 
-        // TODO: Need to wait for processing above to complete.
-        if let Some(code) = process.wait()?.code() {
+        let status = process.wait();
+        drop(pty);
+
+        let _ = pipe.await;
+        if let Some(code) = status?.code() {
             exit(code);
         }
 
