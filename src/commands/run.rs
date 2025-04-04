@@ -1,16 +1,16 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use akv_cli::{cache::ClientCache, pty, ErrorKind, Result};
+use akv_cli::{cache::ClientCache, pty::CommandExt, ErrorKind, Result};
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::Parser;
 use std::{
     collections::HashMap,
     env,
-    io::{self, BufRead, BufReader, IsTerminal as _},
+    io::{BufRead, BufReader},
     path::PathBuf,
-    process::{exit, Command, Stdio},
+    process::{exit, Command},
     sync::Arc,
 };
 use tokio::sync::Mutex;
@@ -117,7 +117,6 @@ impl Args {
             return Ok(());
         }
 
-        let (pty, ref pts) = pty::open()?;
         let mut args = self.args.iter();
         let program = args.next().ok_or_else(|| {
             akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
@@ -125,24 +124,21 @@ impl Args {
         let mut cmd = Command::new(program);
         cmd.args(args);
 
-        // If stdout or stderr is already redirected, redirect the same streams for the PTY.
-        if io::stdout().is_terminal() {
-            cmd.stdout::<Stdio>(pts.try_into()?);
-        }
-        if io::stderr().is_terminal() {
-            cmd.stderr::<Stdio>(pts.try_into()?);
-        }
+        let (mut process, pty) = cmd.spawn_pty()?;
+        tokio::spawn(async move {
+            let reader = BufReader::new(pty);
+            let lines = reader.lines();
+            for line in lines {
+                let Ok(line) = line else {
+                    continue;
+                };
 
-        let mut process = cmd
-            .spawn()
-            .map_err(|err| akv_cli::Error::new(ErrorKind::Io, err))?;
-        let reader = BufReader::new(pty);
-        let mut lines = reader.lines();
-        while let Some(Ok(line)) = lines.next() {
-            let masked = mask_secrets(&line, &secrets);
-            println!("{masked}");
-        }
+                let masked = mask_secrets(&line, &secrets);
+                println!("{masked}");
+            }
+        });
 
+        // TODO: Need to wait for processing above to complete.
         if let Some(code) = process.wait()?.code() {
             exit(code);
         }
