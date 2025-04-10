@@ -44,7 +44,7 @@ jobs:
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Set up toolchain
-      run: rustup show
+      run: rustup install
     - name: Test
       run: cargo test --all-features --workspace
 
@@ -64,7 +64,7 @@ jobs:
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Set up toolchain
-      run: rustup show
+      run: rustup install
     - name: Check formatting
       if: ${{ success() && (!inputs.release || github.event_name != 'workflow_call') }}
       run: cargo fmt --all -- --check
