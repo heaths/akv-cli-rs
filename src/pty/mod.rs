@@ -1,17 +1,20 @@
 // Copyright 2024 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+// cspell:ignore pseudoconsole
 #[cfg(not(windows))]
 mod posix;
+#[cfg(windows)]
 mod windows;
 
 #[cfg(not(windows))]
 use posix as inner;
 use std::{
     fmt,
-    io::{self, IsTerminal, Read},
-    process::{Child, Command, Stdio},
+    io::{self, Read},
 };
+#[cfg(windows)]
+use windows as inner;
 
 #[derive(Clone)]
 pub struct Pty<'a>(inner::Pty<'a>);
@@ -32,27 +35,6 @@ impl Read for Pty<'_> {
 pub trait CommandExt: __private::Sealed {
     type Output;
     fn spawn_pty<'a>(&mut self) -> crate::Result<(Self::Output, Pty<'a>)>;
-}
-
-impl CommandExt for Command {
-    type Output = Child;
-    fn spawn_pty<'a>(&mut self) -> crate::Result<(Self::Output, Pty<'a>)> {
-        #[cfg(not(windows))]
-        {
-            let (pty, ref pts) = posix::open()?;
-            if io::stdout().is_terminal() {
-                self.stdout::<Stdio>(pts.try_into()?);
-            }
-            if io::stderr().is_terminal() {
-                self.stderr::<Stdio>(pts.try_into()?);
-            }
-
-            Ok((self.spawn()?, Pty(pty)))
-        }
-
-        #[cfg(windows)]
-        todo!()
-    }
 }
 
 mod __private {

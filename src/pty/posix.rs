@@ -75,6 +75,8 @@ impl Read for Pty<'_> {
 
         if len == -1 {
             let err = io::Error::last_os_error();
+            tracing::trace!("read error {err:?}");
+
             if let Some(libc::EBADF) = err.raw_os_error() {
                 return Ok(0);
             }
