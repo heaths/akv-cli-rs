@@ -1,21 +1,19 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use akv_cli::{cache::ClientCache, ErrorKind, Result};
+use akv_cli::{cache::ClientCache, pty::CommandExt, ErrorKind, Result};
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::Parser;
-use futures::StreamExt as _;
 use std::{
     collections::HashMap,
     env,
-    io::{self, Write},
+    io::{BufRead, BufReader},
     path::PathBuf,
-    process::{exit, Stdio},
+    process::{exit, Command},
     sync::Arc,
 };
-use tokio::{process::Command, sync::Mutex};
-use tokio_util::codec::{FramedRead, LinesCodec};
+use tokio::sync::Mutex;
 use tracing::Level;
 
 const MASK: &str = "<concealed by akv>";
@@ -104,118 +102,55 @@ impl Args {
             .map(ToOwned::to_owned)
             .collect();
 
-        let mut args = self.args.iter();
-        let program = args.next().ok_or_else(|| {
-            akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
-        })?;
-        let mut cmd = Command::new(program);
-
         // Write directly to stdout, stderr if not masking.
         if self.no_masking {
+            let mut args = self.args.iter();
+            let program = args.next().ok_or_else(|| {
+                akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
+            })?;
+            let mut cmd = Command::new(program);
             let mut process = cmd.args(args).spawn()?;
-            if let Some(code) = process.wait().await?.code() {
+            if let Some(code) = process.wait()?.code() {
                 exit(code);
             }
 
             return Ok(());
         }
 
-        // Otherwise, capture stdout, stderr and mask any instances of cached secrets.
-        let (tx, rx) = std::sync::mpsc::channel::<TaggedLine>();
-        let mut process = cmd
-            .args(args)
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
+        let mut args = self.args.iter();
+        let program = args.next().ok_or_else(|| {
+            akv_cli::Error::with_message(ErrorKind::InvalidData, "command required")
+        })?;
+        let mut cmd = Command::new(program);
+        cmd.args(args);
 
-        let mut stdout = FramedRead::new(
-            process.stdout.take().ok_or_else(|| {
-                akv_cli::Error::with_message(ErrorKind::Other, "failed to redirect stdout")
-            })?,
-            LinesCodec::new(),
-        );
-        let stdout_fut = tokio::spawn({
-            let tx = tx.clone();
+        let (mut process, pty) = cmd.spawn_pty()?;
+        let pipe = tokio::spawn({
+            let pty = pty.clone();
             async move {
-                while let Some(line) = stdout.next().await {
-                    if let Ok(line) = line {
-                        #[allow(unused_must_use)]
-                        tx.send(TaggedLine::stdio(line));
-                    }
+                let reader = BufReader::new(pty);
+                let lines = reader.lines().fuse();
+                for line in lines {
+                    let Ok(line) = line else {
+                        continue;
+                    };
+
+                    let masked = mask_secrets(&line, &secrets);
+                    println!("{masked}");
                 }
             }
         });
-        let mut stderr = FramedRead::new(
-            process.stderr.take().ok_or_else(|| {
-                akv_cli::Error::with_message(ErrorKind::Other, "failed to redirect stderr")
-            })?,
-            LinesCodec::new(),
-        );
-        let stderr_fut = tokio::spawn({
-            let tx = tx.clone();
-            async move {
-                while let Some(line) = stderr.next().await {
-                    if let Ok(line) = line {
-                        #[allow(unused_must_use)]
-                        tx.send(TaggedLine::stderr(line));
-                    }
-                }
-            }
-        });
-        drop(tx);
 
-        let mut stdout = io::stdout();
-        let mut stderr = io::stderr();
-        for tagged_line in rx.iter() {
-            let masked = mask_secrets(&tagged_line.line, &secrets);
-            match tagged_line.tag {
-                Tag::Stdout => {
-                    stdout.write_all(masked.as_bytes())?;
-                    stdout.flush()?;
-                }
-                Tag::Stderr => {
-                    stderr.write_all(masked.as_bytes())?;
-                    stderr.flush()?;
-                }
-            }
-        }
+        let status = process.wait();
+        drop(pty);
 
-        let (status, _, _) = tokio::join!(process.wait(), stdout_fut, stderr_fut);
+        let _ = pipe.await;
         if let Some(code) = status?.code() {
             exit(code);
         }
 
-        return Ok(());
+        Ok(())
     }
-}
-
-#[derive(Debug)]
-struct TaggedLine {
-    tag: Tag,
-    line: String,
-}
-
-impl TaggedLine {
-    fn stdio(line: String) -> Self {
-        Self {
-            tag: Tag::Stdout,
-            line,
-        }
-    }
-
-    fn stderr(line: String) -> Self {
-        Self {
-            tag: Tag::Stderr,
-            line,
-        }
-    }
-}
-
-#[derive(Debug)]
-enum Tag {
-    Stdout,
-    Stderr,
 }
 
 fn mask_secrets(line: &str, secrets: &Vec<String>) -> String {
@@ -223,5 +158,5 @@ fn mask_secrets(line: &str, secrets: &Vec<String>) -> String {
     for secret in secrets {
         masked = masked.replace(secret, MASK);
     }
-    masked + "\n"
+    masked
 }

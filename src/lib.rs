@@ -1,9 +1,12 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+#![cfg_attr(windows, feature(windows_process_extensions_raw_attribute))]
+
 pub mod cache;
 mod error;
 pub mod parsing;
+pub mod pty;
 
 use async_stream::try_stream;
 use azure_security_keyvault_secrets::{models::SecretItem, SecretClient};

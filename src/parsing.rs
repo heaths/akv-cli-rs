@@ -76,7 +76,7 @@ where
         };
         end += start + START_LEN;
 
-        w.write_all(template[..start].as_bytes())?;
+        w.write_all(&template.as_bytes()[..start])?;
         start += START_LEN;
 
         let id = template[start..end].trim();

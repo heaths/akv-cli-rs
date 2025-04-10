@@ -1,6 +1,6 @@
 [package]
 name = "akv-cli"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = """
 The Azure Key Vault CLI can be used to read secrets, pass them securely to other commands,
@@ -20,16 +20,14 @@ clap = { version = "4.5.28", features = ["derive", "env"] }
 clap_complete = "4.5.46"
 dotenvy = "0.15.7"
 futures = "0.3.31"
+libc = "0.2.171"
 prettytable-rs = "0.10.0"
 time = "0.3.37"
 timeago = "0.4.2"
 tokio = { version = "1.43.0", features = [
-    "io-std",
     "macros",
-    "process",
     "rt",
 ] }
-tokio-util = { version = "0.7.13", features = ["codec"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 url = "2.5.4"
