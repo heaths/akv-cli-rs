@@ -2,42 +2,51 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 // cspell:disable
-use crate::Result;
 use libc::{fcntl, openpty, F_GETFL, F_SETFL, O_NONBLOCK};
 use std::{
-    io::{self, Read},
+    io::{self, IsTerminal as _, Read},
     os::fd::{AsRawFd, BorrowedFd, FromRawFd, OwnedFd},
-    process::Stdio,
+    process::{Child, Command, Stdio},
     ptr,
 };
 
-/// Open a pseudoterminal.
-pub fn open<'a>() -> Result<(Pty<'a>, Pts)> {
-    let mut pty = 0;
-    let mut pts = 0;
-    unsafe {
-        let ret = openpty(
-            &mut pty,
-            &mut pts,
-            ptr::null_mut(),
-            ptr::null_mut(),
-            ptr::null_mut(),
-        );
-        if ret != 0 {
-            Err(io::Error::last_os_error())?;
-        }
+impl super::CommandExt for Command {
+    type Output = Child;
 
-        let mut flags = fcntl(pty, F_GETFL);
-        flags |= O_NONBLOCK;
-        let ret = fcntl(pty, F_SETFL, flags);
-        if ret != 0 {
-            Err(io::Error::last_os_error())?;
-        }
+    fn spawn_pty<'a>(&mut self) -> crate::Result<(Self::Output, super::Pty<'a>)> {
+        let mut pty = 0;
+        let mut pts = 0;
+        unsafe {
+            let ret = openpty(
+                &mut pty,
+                &mut pts,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+            );
+            if ret != 0 {
+                Err(io::Error::last_os_error())?;
+            }
 
-        Ok((
-            Pty::Owned(OwnedFd::from_raw_fd(pty)),
-            Pts(OwnedFd::from_raw_fd(pts)),
-        ))
+            let mut flags = fcntl(pty, F_GETFL);
+            flags |= O_NONBLOCK;
+            let ret = fcntl(pty, F_SETFL, flags);
+            if ret != 0 {
+                Err(io::Error::last_os_error())?;
+            }
+
+            let pty = Pty::Owned(OwnedFd::from_raw_fd(pty));
+            let pts = Pts(OwnedFd::from_raw_fd(pts));
+
+            if io::stdout().is_terminal() {
+                self.stdout::<Stdio>(pts.0.try_clone()?.into());
+            }
+            if io::stderr().is_terminal() {
+                self.stderr::<Stdio>(pts.0.try_clone()?.into());
+            }
+
+            Ok((self.spawn()?, super::Pty(pty)))
+        }
     }
 }
 
@@ -91,10 +100,3 @@ impl Read for Pty<'_> {
 /// The child end of a pseudoterminal.
 #[derive(Debug)]
 pub struct Pts(OwnedFd);
-
-impl TryFrom<&Pts> for Stdio {
-    type Error = io::Error;
-    fn try_from(pts: &Pts) -> std::result::Result<Self, Self::Error> {
-        Ok(pts.0.try_clone()?.into())
-    }
-}
