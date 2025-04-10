@@ -1,6 +1,6 @@
 [package]
 name = "akv-cli"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = """
 The Azure Key Vault CLI can be used to read secrets, pass them securely to other commands,
