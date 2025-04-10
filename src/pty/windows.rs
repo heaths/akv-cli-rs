@@ -7,10 +7,9 @@
 use crate::{Error, ErrorKind};
 use std::{
     cmp, fmt, io,
-    marker::PhantomData,
-    mem,
+    mem::{self, ManuallyDrop},
     os::windows::{
-        io::AsRawHandle as _,
+        io::{AsRawHandle, BorrowedHandle, FromRawHandle, OwnedHandle, RawHandle},
         process::{CommandExt as _, ProcThreadAttributeList},
         raw::HANDLE,
     },
@@ -33,7 +32,7 @@ impl super::CommandExt for Command {
 
             if ffi::CreatePipe(
                 &mut input_read as *mut HANDLE,
-                &mut input_write as *mut HANDLE,
+                &mut input_write,
                 ptr::null(),
                 0,
             )
@@ -43,7 +42,7 @@ impl super::CommandExt for Command {
             }
 
             if ffi::CreatePipe(
-                &mut output_read as *mut HANDLE,
+                &mut output_read,
                 &mut output_write as *mut HANDLE,
                 ptr::null(),
                 0,
@@ -90,10 +89,9 @@ impl super::CommandExt for Command {
             Ok((
                 child,
                 super::Pty(Pty {
-                    console_handle,
-                    read_handle: output_read,
-                    write_handle: input_write,
-                    _phantom: PhantomData,
+                    console_handle: Handle::from_raw_handle(console_handle),
+                    read_handle: Handle::from_raw_handle(output_read),
+                    write_handle: Handle::from_raw_handle(input_write),
                 }),
             ))
         }
@@ -102,25 +100,29 @@ impl super::CommandExt for Command {
 
 #[derive(Clone, Debug)]
 pub struct Pty<'a> {
-    console_handle: HPCON,
-    read_handle: HANDLE,
-    write_handle: HANDLE,
-    _phantom: PhantomData<&'a Self>,
+    console_handle: Handle<'a>,
+    read_handle: Handle<'a>,
+    write_handle: Handle<'a>,
 }
 
 // A handle can safely be sent to another thread.
 unsafe impl Send for Pty<'_> {}
-unsafe impl Sync for Pty<'_> {}
 
 impl Drop for Pty<'_> {
     fn drop(&mut self) {
         unsafe {
-            ffi::ClosePseudoConsole(self.console_handle);
+            if let Handle::Owned(h) = &self.console_handle {
+                ffi::ClosePseudoConsole(h.as_raw_handle());
+            }
 
             // Must close the write handle before the read handle to terminate the pipe.
-            ffi::CloseHandle(self.write_handle);
-            ffi::CloseHandle(self.read_handle);
-        };
+            if let Handle::Owned(h) = &self.write_handle {
+                ffi::CloseHandle(h.as_raw_handle());
+            }
+            if let Handle::Owned(h) = &self.read_handle {
+                ffi::CloseHandle(h.as_raw_handle());
+            }
+        }
     }
 }
 
@@ -130,7 +132,7 @@ impl io::Read for Pty<'_> {
         let mut read = 0u32;
         unsafe {
             if ffi::ReadFile(
-                self.read_handle,
+                self.read_handle.as_raw_handle(),
                 buf.as_mut_ptr().cast::<u8>(),
                 len,
                 &mut read,
@@ -151,6 +153,33 @@ impl io::Read for Pty<'_> {
         }
 
         Ok(read as usize)
+    }
+}
+
+#[derive(Debug)]
+enum Handle<'a> {
+    Owned(ManuallyDrop<OwnedHandle>),
+    Borrowed(BorrowedHandle<'a>),
+}
+
+impl Handle<'_> {
+    fn from_raw_handle(handle: RawHandle) -> Self {
+        unsafe { Self::Owned(ManuallyDrop::new(OwnedHandle::from_raw_handle(handle))) }
+    }
+}
+
+impl AsRawHandle for Handle<'_> {
+    fn as_raw_handle(&self) -> RawHandle {
+        match self {
+            Self::Owned(h) => h.as_raw_handle(),
+            Self::Borrowed(h) => h.as_raw_handle(),
+        }
+    }
+}
+
+impl Clone for Handle<'_> {
+    fn clone(&self) -> Self {
+        unsafe { Self::Borrowed(BorrowedHandle::borrow_raw(self.as_raw_handle())) }
     }
 }
 
@@ -221,8 +250,8 @@ mod ffi {
 
     #[repr(C)]
     pub struct COORD {
-        pub x: SHORT,
-        pub y: SHORT,
+        x: SHORT,
+        y: SHORT,
     }
 
     #[repr(C)]
