@@ -3,7 +3,7 @@
 
 use super::VAULT_ENV_NAME;
 use akv_cli::{
-    list_secret_versions, list_secrets,
+    list_items,
     parsing::{parse_key_value, parse_key_value_opt},
     Result,
 };
@@ -14,7 +14,7 @@ use azure_security_keyvault_secrets::{
     ResourceExt, ResourceId, SecretClient,
 };
 use clap::Subcommand;
-use futures::TryStreamExt as _;
+use futures::{future, TryStreamExt as _};
 use prettytable::{color, format, Attr, Cell, Row, Table};
 use std::collections::HashMap;
 use timeago::Formatter;
@@ -247,9 +247,16 @@ impl Commands {
         Span::current().record("vault", vault.as_str());
 
         let client = SecretClient::new(vault.as_str(), DefaultAzureCredential::new()?, None)?;
-        let mut secrets: Vec<SecretProperties> = list_secrets(&client, *include_managed)
-            .try_collect()
-            .await?;
+        let mut secrets: Vec<SecretProperties> =
+            list_items(async || client.list_secret_properties(None))
+                .try_filter(|props| {
+                    if *include_managed {
+                        return future::ready(true);
+                    }
+                    future::ready(!props.managed.unwrap_or_default())
+                })
+                .try_collect()
+                .await?;
         secrets.sort_by(|a, b| a.id.cmp(&b.id));
 
         let mut table = Table::new();
@@ -324,7 +331,9 @@ impl Commands {
 
         let client = SecretClient::new(&vault, DefaultAzureCredential::new()?, None)?;
         let mut secrets: Vec<SecretProperties> =
-            list_secret_versions(&client, &name).try_collect().await?;
+            list_items(async || client.list_secret_properties_versions(&name, None))
+                .try_collect()
+                .await?;
         secrets.sort_by(|a, b| a.id.cmp(&b.id));
 
         let mut table = Table::new();
@@ -405,6 +414,7 @@ fn show(secret: &Secret) -> Result<()> {
             .and_then(|attr| attr.enabled)
             .unwrap_or_default()
     );
+    println!("Managed: {}", secret.managed.unwrap_or_default());
     println!(
         "Created: {}",
         elapsed(
@@ -445,7 +455,6 @@ fn show(secret: &Secret) -> Result<()> {
             .as_ref()
             .map_or_else(String::new, |s| s.into()),
     );
-    println!("Managed: {}", secret.managed.unwrap_or_default());
     println!("Tags:");
     for (k, v) in &secret.tags {
         println!("  {k}: {v}");
