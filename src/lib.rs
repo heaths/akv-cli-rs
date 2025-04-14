@@ -9,43 +9,35 @@ pub mod parsing;
 pub mod pty;
 
 use async_stream::try_stream;
-use azure_security_keyvault_secrets::{models::SecretProperties, SecretClient};
+use azure_core::http::{Model, Pager};
+use azure_security_keyvault_secrets::models::{ListSecretPropertiesResult, SecretProperties};
 pub use error::*;
 use futures::{Stream, StreamExt as _};
 use std::pin::Pin;
-use tracing::Level;
 
-#[tracing::instrument(level = Level::INFO, skip(client), fields(vault = %client.endpoint()))]
-pub fn list_secrets(
-    client: &SecretClient,
-    include_managed: bool,
-) -> Pin<Box<impl Stream<Item = Result<SecretProperties>> + '_>> {
-    Box::pin(try_stream! {
-        let mut pager = client.list_secret_properties(None)?;
-        while let Some(page) = pager.next().await {
-            let result = page?.into_body().await?;
-                for secret in result.value {
-                    if !include_managed && secret.managed == Some(true) {
-                        continue;
-                    }
-                    yield secret;
-                }
-        }
-    })
+pub trait Page<T> {
+    fn items(self) -> impl Iterator<Item = T>;
 }
 
-#[tracing::instrument(level = Level::INFO, skip(client), fields(vault = %client.endpoint()))]
-pub fn list_secret_versions<'a>(
-    client: &'a SecretClient,
-    name: &'a str,
-) -> Pin<Box<impl Stream<Item = Result<SecretProperties>> + 'a>> {
+impl Page<SecretProperties> for ListSecretPropertiesResult {
+    fn items(self) -> impl Iterator<Item = SecretProperties> {
+        self.value.into_iter()
+    }
+}
+
+pub fn list_items<R, T, F, E>(f: F) -> Pin<Box<impl Stream<Item = Result<T>>>>
+where
+    R: Model + Page<T>,
+    F: AsyncFn() -> std::result::Result<Pager<R>, E>,
+    E: Into<Error>,
+{
     Box::pin(try_stream! {
-        let mut pager = client.list_secret_properties_versions(name, None)?;
+        let mut pager = f().await?;
         while let Some(page) = pager.next().await {
             let result = page?.into_body().await?;
-                for secret in result.value {
-                    yield secret;
-                }
+            for item in result.items() {
+                yield item;
             }
+        }
     })
 }
