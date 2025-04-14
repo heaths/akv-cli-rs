@@ -3,14 +3,14 @@
 
 use super::VAULT_ENV_NAME;
 use akv_cli::{
-    list_secrets,
+    list_secret_versions, list_secrets,
     parsing::{parse_key_value, parse_key_value_opt},
     Result,
 };
-use azure_core::{date::OffsetDateTime, Url};
+use azure_core::{date::OffsetDateTime, http::Url};
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{
-    models::{SecretBundle, SecretItem, SecretSetParameters, SecretUpdateParameters},
+    models::{Secret, SecretProperties, SetSecretParameters, UpdateSecretPropertiesParameters},
     ResourceExt, ResourceId, SecretClient,
 };
 use clap::Subcommand;
@@ -92,6 +92,29 @@ pub enum Commands {
         /// Show more details about each secret.
         #[arg(long)]
         long: bool,
+
+        /// Include managed secrets.
+        #[arg(long)]
+        include_managed: bool,
+    },
+
+    /// List versions of a secret in an Azure Key Vault.
+    ListVersions {
+        /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
+        #[arg(group = "ident", value_name = "URL")]
+        id: Option<Url>,
+
+        /// The secret name.
+        #[arg(long, group = "ident", requires = "vault")]
+        name: Option<String>,
+
+        /// The vault URL e.g., "https://my-vault.vault.azure.net".
+        #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
+        vault: Option<Url>,
+
+        /// Show more details about each version.
+        #[arg(long)]
+        long: bool,
     },
 }
 
@@ -102,6 +125,7 @@ impl Commands {
             Commands::Edit { .. } => self.edit().await,
             Commands::Get { .. } => self.get().await,
             Commands::List { .. } => self.list().await,
+            Commands::ListVersions { .. } => self.list_versions().await,
         }
     }
 
@@ -123,13 +147,13 @@ impl Commands {
 
         let client = SecretClient::new(vault.as_str(), DefaultAzureCredential::new()?, None)?;
 
-        let params = SecretSetParameters {
+        let params = SetSecretParameters {
             value: Some(secret.0.to_string()),
             content_type: content_type.clone(),
-            tags: Some(HashMap::from_iter(
+            tags: HashMap::from_iter(
                 tags.iter()
                     .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
-            )),
+            ),
             ..Default::default()
         };
 
@@ -167,14 +191,14 @@ impl Commands {
             tags.iter()
                 .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
         );
-        let params = SecretUpdateParameters {
+        let params = UpdateSecretPropertiesParameters {
             content_type: content_type.clone(),
-            tags: if !tags.is_empty() { Some(tags) } else { None },
+            tags,
             ..Default::default()
         };
 
         let secret = client
-            .update_secret(
+            .update_secret_properties(
                 &name,
                 version.as_deref().unwrap_or_default(),
                 params.try_into()?,
@@ -211,14 +235,21 @@ impl Commands {
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault), err)]
     async fn list(&self) -> Result<()> {
-        let Commands::List { vault, long } = self else {
+        let Commands::List {
+            vault,
+            long,
+            include_managed,
+        } = self
+        else {
             panic!("invalid command");
         };
 
         Span::current().record("vault", vault.as_str());
 
         let client = SecretClient::new(vault.as_str(), DefaultAzureCredential::new()?, None)?;
-        let mut secrets: Vec<SecretItem> = list_secrets(&client).try_collect().await?;
+        let mut secrets: Vec<SecretProperties> = list_secrets(&client, *include_managed)
+            .try_collect()
+            .await?;
         secrets.sort_by(|a, b| a.id.cmp(&b.id));
 
         let mut table = Table::new();
@@ -272,6 +303,79 @@ impl Commands {
 
         Ok(())
     }
+
+    #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
+    async fn list_versions(&self) -> Result<()> {
+        let Commands::ListVersions {
+            id,
+            name,
+            vault,
+            long,
+        } = self
+        else {
+            panic!("invalid command");
+        };
+
+        let (vault, name, version) = super::select(id.as_ref(), vault.as_ref(), name.as_ref())?;
+        let current = Span::current();
+        current.record("vault", &*vault);
+        current.record("name", &*name);
+        current.record("version", version.as_deref());
+
+        let client = SecretClient::new(&vault, DefaultAzureCredential::new()?, None)?;
+        let mut secrets: Vec<SecretProperties> =
+            list_secret_versions(&client, &name).try_collect().await?;
+        secrets.sort_by(|a, b| a.id.cmp(&b.id));
+
+        let mut table = Table::new();
+        table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
+
+        let mut titles = Row::new(vec![
+            Cell::new("ID").with_style(Attr::Dim),
+            Cell::new("TYPE").with_style(Attr::Dim),
+        ]);
+        if *long {
+            titles.add_cell(Cell::new("CREATED").with_style(Attr::Dim));
+        }
+        titles.add_cell(Cell::new("EDITED").with_style(Attr::Dim));
+        table.set_titles(titles);
+
+        let now = OffsetDateTime::now_utc();
+        let formatter = Formatter::new();
+        let id_attr = Attr::ForegroundColor(color::GREEN);
+
+        for secret in &secrets {
+            let resource: ResourceId = secret.resource_id()?;
+            let source_id = resource.source_id;
+            let r#type = secret.content_type.as_deref().unwrap_or_default();
+
+            let mut row = Row::new(vec![
+                Cell::new(source_id.as_str()).with_style(id_attr),
+                Cell::new(r#type),
+            ]);
+            if *long {
+                let created = elapsed(
+                    &formatter,
+                    now,
+                    secret.attributes.as_ref().and_then(|attr| attr.created),
+                );
+                row.add_cell(Cell::new(created.as_str()));
+            }
+            let edited = elapsed(
+                &formatter,
+                now,
+                secret.attributes.as_ref().and_then(|attr| attr.updated),
+            );
+            row.add_cell(Cell::new(edited.as_str()));
+
+            table.add_row(row);
+        }
+
+        // cspell:ignore printstd
+        table.printstd();
+
+        Ok(())
+    }
 }
 
 fn elapsed(
@@ -284,7 +388,7 @@ fn elapsed(
         .map_or_else(String::new, |d| formatter.convert(d))
 }
 
-fn show(secret: &SecretBundle) -> Result<()> {
+fn show(secret: &Secret) -> Result<()> {
     let resource = secret.resource_id()?;
 
     let now = OffsetDateTime::now_utc();
@@ -341,11 +445,10 @@ fn show(secret: &SecretBundle) -> Result<()> {
             .as_ref()
             .map_or_else(String::new, |s| s.into()),
     );
+    println!("Managed: {}", secret.managed.unwrap_or_default());
     println!("Tags:");
-    if let Some(tags) = &secret.tags {
-        for (k, v) in tags {
-            println!("  {k}: {v}");
-        }
+    for (k, v) in &secret.tags {
+        println!("  {k}: {v}");
     }
 
     Ok(())
