@@ -7,7 +7,7 @@ use akv_cli::{
     parsing::{replace_expressions, replace_vars},
     ErrorKind, Result,
 };
-use azure_core::Url;
+use azure_core::http::Url;
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::Parser;

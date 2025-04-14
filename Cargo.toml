@@ -9,13 +9,13 @@ or inject them into configuration files.
 authors = ["Heath Stewart (https://github.com/heaths)"]
 repository = "https://github.com/heaths/akv-cli-rs"
 license = "MIT"
-rust-version = "1.80"
+rust-version = "1.85"
 
 [dependencies]
 async-stream = "0.3.6"
-azure_core = "0.22.0"
-azure_identity = "0.22.0"
-azure_security_keyvault_secrets = "0.1.0"
+azure_core = "0.23.0"
+azure_identity = "0.23.0"
+azure_security_keyvault_secrets = "0.2.0"
 clap = { version = "4.5.28", features = ["derive", "env"] }
 clap_complete = "4.5.46"
 dotenvy = "0.15.7"
