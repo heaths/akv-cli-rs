@@ -15,6 +15,7 @@ rust-version = "1.85"
 async-stream = "0.3.6"
 azure_core = "0.23.0"
 azure_identity = "0.23.0"
+azure_security_keyvault_keys = "0.2.0"
 azure_security_keyvault_secrets = "0.2.0"
 clap = { version = "4.5.28", features = ["derive", "env"] }
 clap_complete = "4.5.46"
@@ -22,6 +23,7 @@ dotenvy = "0.15.7"
 futures = "0.3.31"
 libc = "0.2.171"
 prettytable-rs = "0.10.0"
+serde = { version = "1.0.217", features = ["derive"] }
 time = "0.3.37"
 timeago = "0.4.2"
 tokio = { version = "1.43.0", features = [
