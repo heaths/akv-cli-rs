@@ -334,7 +334,11 @@ impl Commands {
             list_items(async || client.list_secret_properties_versions(&name, None))
                 .try_collect()
                 .await?;
-        secrets.sort_by(|a, b| a.id.cmp(&b.id));
+        secrets.sort_by(|a, b| {
+            let a = a.attributes.as_ref().and_then(|x| x.updated);
+            let b = b.attributes.as_ref().and_then(|x| x.updated);
+            a.cmp(&b).reverse()
+        });
 
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
