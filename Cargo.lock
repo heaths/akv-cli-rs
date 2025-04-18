@@ -35,6 +35,7 @@ dependencies = [
  "async-stream",
  "azure_core",
  "azure_identity",
+ "azure_security_keyvault_keys",
  "azure_security_keyvault_secrets",
  "clap",
  "clap_complete",
@@ -42,6 +43,7 @@ dependencies = [
  "futures",
  "libc",
  "prettytable-rs",
+ "serde",
  "time",
  "timeago",
  "tokio",
@@ -214,6 +216,21 @@ dependencies = [
  "tracing",
  "typespec_client_core",
  "url",
+]
+
+[[package]]
+name = "azure_security_keyvault_keys"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10404cd161a2e24b6d697089046056f47895eddd230cd6f83a5a4b4818f8ae91"
+dependencies = [
+ "azure_core",
+ "futures",
+ "rustc_version",
+ "serde",
+ "serde_json",
+ "time",
+ "typespec_client_core",
 ]
 
 [[package]]
