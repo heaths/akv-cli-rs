@@ -34,6 +34,9 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 url = "2.5.4"
 
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+tokio = { version = "1.43.0", features = ["process"] }
+
 [dev-dependencies]
 anstream = "0.6.18"
 anstyle = "1.0.10"
