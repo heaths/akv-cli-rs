@@ -5,6 +5,7 @@
 
 pub mod cache;
 mod error;
+pub mod jwt;
 pub mod parsing;
 pub mod pty;
 
