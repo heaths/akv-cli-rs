@@ -42,7 +42,3 @@ anstyle = "1.0.10"
 opt-level = "s"
 panic = "abort"
 strip = "debuginfo"
-
-[[bin]]
-name = "akv"
-path = "src/main.rs"

@@ -1,7 +1,7 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use akv_cli::{cache::ClientCache, pty::CommandExt, ErrorKind, Result};
+use akv_cli::{cache::ClientCache, pty::CommandExt as _, ErrorKind, Result};
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::Parser;
