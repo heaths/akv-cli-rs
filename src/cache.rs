@@ -1,10 +1,10 @@
 // Copyright 2024 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use crate::ErrorKind;
 use azure_security_keyvault_secrets::SecretClient;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
+use url::Url;
 
 #[derive(Clone, Default)]
 pub struct ClientCache {
@@ -17,23 +17,23 @@ impl ClientCache {
         Default::default()
     }
 
-    pub async fn get(&mut self, client: Arc<SecretClient>) -> crate::Result<Arc<SecretClient>> {
-        let endpoint = client
-            .endpoint()
-            .host_str()
-            .ok_or_else(|| {
-                crate::Error::with_message(ErrorKind::InvalidData, "no host for SecretClient")
-            })?
-            .to_string();
-
+    pub async fn get<F>(
+        &mut self,
+        endpoint: impl AsRef<str>,
+        f: F,
+    ) -> crate::Result<Arc<SecretClient>>
+    where
+        F: FnOnce(&str) -> azure_core::Result<SecretClient>,
+    {
+        // Canonicalize the URL.
+        let endpoint = Url::parse(endpoint.as_ref())?.to_string();
         let mut cache = self.cache.lock().await;
         if let Some(c) = cache.get(&endpoint) {
-            tracing::debug!(
-                "found cached client for '{vault}'",
-                vault = c.endpoint().as_str()
-            );
+            tracing::debug!("found cached client for '{vault}'", vault = &endpoint);
             return Ok(c.clone());
         };
+
+        let client = Arc::new(f(&endpoint)?);
 
         tracing::debug!("caching new client for '{vault}'", vault = &endpoint,);
         cache.insert(endpoint, client.clone());
@@ -52,24 +52,21 @@ mod tests {
 
         let mut cache = ClientCache::new();
         cache
-            .get(Arc::new(
-                SecretClient::new("https://vault1.vault.azure.net", credential.clone(), None)
-                    .unwrap(),
-            ))
+            .get("https://vault1.vault.azure.net", |endpoint| {
+                SecretClient::new(endpoint, credential.clone(), None)
+            })
             .await
             .expect("add first client");
         cache
-            .get(Arc::new(
-                SecretClient::new("https://vault2.vault.azure.net", credential.clone(), None)
-                    .unwrap(),
-            ))
+            .get("https://vault2.vault.azure.net", |endpoint| {
+                SecretClient::new(endpoint, credential.clone(), None)
+            })
             .await
             .expect("add first client");
         cache
-            .get(Arc::new(
-                SecretClient::new("https://vault1.vault.azure.net/", credential.clone(), None)
-                    .unwrap(),
-            ))
+            .get("https://vault1.vault.azure.net/", |endpoint| {
+                SecretClient::new(endpoint, credential.clone(), None)
+            })
             .await
             .expect("add first client again");
 

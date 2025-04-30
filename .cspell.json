@@ -12,6 +12,7 @@
   "words": [
     "clippy",
     "debuginfo",
+    "deque",
     "dotenv",
     "libc",
     "lldb",

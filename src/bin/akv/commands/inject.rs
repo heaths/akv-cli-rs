@@ -16,7 +16,6 @@ use std::{
     env, fs,
     io::{self, Read, Write},
     path::PathBuf,
-    sync::Arc,
 };
 use tracing::Level;
 
@@ -64,11 +63,9 @@ impl Args {
         let mut cache = ClientCache::new();
         if let Some(vault) = self.vault.as_ref() {
             cache
-                .get(Arc::new(SecretClient::new(
-                    vault.as_str(),
-                    credentials.clone(),
-                    None,
-                )?))
+                .get(vault.as_str(), |endpoint| {
+                    SecretClient::new(endpoint, credentials.clone(), None)
+                })
                 .await?;
         };
 
@@ -97,11 +94,9 @@ impl Args {
                 let id: ResourceId = id.parse()?;
 
                 let client = cache
-                    .get(Arc::new(SecretClient::new(
-                        &id.vault_url,
-                        credentials.clone(),
-                        None,
-                    )?))
+                    .get(&id.vault_url, |endpoint| {
+                        SecretClient::new(endpoint, credentials.clone(), None)
+                    })
                     .await?;
 
                 let secret = client
