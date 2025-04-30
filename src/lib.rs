@@ -47,26 +47,30 @@ where
 mod tests {
     use super::*;
     use azure_core::{
+        credentials::{AccessToken, TokenCredential},
         http::{
             headers::Headers, ClientOptions, HttpClient, Request, Response, StatusCode,
             TransportOptions,
         },
         Bytes,
     };
-    use azure_identity::DefaultAzureCredential;
     use azure_security_keyvault_secrets::{SecretClient, SecretClientOptions};
     use futures::TryStreamExt as _;
     use std::{collections::VecDeque, sync::Arc};
+    use time::{Duration, OffsetDateTime};
     use tokio::sync::Mutex;
 
     #[tokio::test]
     async fn list_secret_properties() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        // Set up mock responses.
         let options = mock_list_secret_properties();
 
-        let credential = DefaultAzureCredential::new()?;
+        // Credentials return an Arc to promote sharing between clients.
+        let credential = MockCredential::new()?;
+
         let client = SecretClient::new(
             "https://my-vault.vault.azure.net",
-            credential,
+            credential.clone(),
             Some(options),
         )?;
         let secret_properties: Vec<SecretProperties> =
@@ -76,6 +80,25 @@ mod tests {
         assert_eq!(secret_properties.len(), 3);
 
         Ok(())
+    }
+
+    #[derive(Debug)]
+    struct MockCredential;
+
+    impl MockCredential {
+        fn new() -> azure_core::Result<Arc<Self>> {
+            Ok(Arc::new(MockCredential))
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl TokenCredential for MockCredential {
+        async fn get_token(&self, _scopes: &[&str]) -> azure_core::Result<AccessToken> {
+            Ok(AccessToken {
+                token: "mock-token".into(),
+                expires_on: OffsetDateTime::now_utc() + Duration::minutes(2),
+            })
+        }
     }
 
     #[derive(Debug)]
