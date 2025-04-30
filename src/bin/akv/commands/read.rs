@@ -8,7 +8,7 @@ use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::SecretClient;
 use clap::Parser;
 use std::{
-    fs::{self},
+    fs,
     io::{self, Write},
     path::PathBuf,
 };
@@ -60,6 +60,7 @@ impl Args {
             .await?;
         if let Some(value) = secret.value {
             match self.out_file.as_ref() {
+                // Write to a file.
                 Some(path) => {
                     let mut file = fs::OpenOptions::new()
                         .create(true)
@@ -69,10 +70,12 @@ impl Args {
                         .open(path)?;
                     file.write_all(value.as_bytes())?;
                 }
+                // Print to stdout without a newline.
                 _ if self.no_newline => {
                     print!("{value}");
                     io::stdout().flush()?;
                 }
+                // Print line to stdout.
                 _ => println!("{value}"),
             }
         }

@@ -72,11 +72,9 @@ impl Args {
 
             // Otherwise, fetch the secret and cache it by the URL.
             let client = cache
-                .get(Arc::new(SecretClient::new(
-                    &id.vault_url,
-                    credentials.clone(),
-                    None,
-                )?))
+                .get(&id.vault_url, |endpoint| {
+                    SecretClient::new(endpoint, credentials.clone(), None)
+                })
                 .await?;
 
             let secret = client
