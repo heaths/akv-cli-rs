@@ -39,6 +39,7 @@ dependencies = [
  "azure_security_keyvault_secrets",
  "clap",
  "clap_complete",
+ "dotazure",
  "dotenvy",
  "futures",
  "libc",
@@ -504,6 +505,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "dotazure"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e7aff99d8c3cf3e96623e6eb4a99c174f8ed6e74038fe3746bcee01659ed363"
+dependencies = [
+ "dotenvy",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
