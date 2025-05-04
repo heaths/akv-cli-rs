@@ -2,10 +2,8 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 mod commands;
-#[cfg(debug_assertions)]
-mod dotenv;
 
-use akv_cli::Result;
+use akv_cli::{ErrorKind, Result, ResultExt as _};
 use clap::Parser;
 use commands::Commands;
 use tracing::level_filters::LevelFilter;
@@ -15,7 +13,7 @@ use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 async fn main() -> Result<()> {
     // Load .env files only in debug builds.
     #[cfg(debug_assertions)]
-    dotenv::load()?;
+    dotazure::load().with_kind(ErrorKind::Io)?;
 
     let args = Args::parse();
     let verbosity = match args.verbose {
