@@ -58,6 +58,8 @@ impl Args {
             .await?
             .into_body()
             .await?;
+        tracing::debug!("retrieved {:?}", secret);
+
         if let Some(value) = secret.value {
             match self.out_file.as_ref() {
                 // Write to a file.

@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "akv-cli"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anstream",
  "anstyle",
@@ -184,9 +184,9 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
 name = "azure_core"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0435fd24f90b870a2b5010a0431ba69b316b6cdf880ae1cf7701671b465ddca"
+checksum = "0f5e6bcc9dfd4587f3132818b6922b9157f00a4df7fd7bf76395ddf37f58983d"
 dependencies = [
  "async-lock",
  "async-trait",
@@ -203,9 +203,9 @@ dependencies = [
 
 [[package]]
 name = "azure_identity"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "236e688ca5a4a5cb44b39292776d780694c977d563cd8e6c0f4dde6dee596197"
+checksum = "640a7f73688fee89da3addbeee9cf6eb5b1dfba0b98c2005263d9da88192bb8f"
 dependencies = [
  "async-lock",
  "async-trait",
@@ -222,9 +222,9 @@ dependencies = [
 
 [[package]]
 name = "azure_security_keyvault_secrets"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5130a12a420c99d83187f85c00aa732ecf641a3a402febd1dda33ab4ae342f9f"
+checksum = "38be66870279ee43de1423da4e580057fa49779cb40fd6db1af2e836a4adcee7"
 dependencies = [
  "azure_core",
  "futures",
@@ -1183,6 +1183,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "num_threads"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "oauth2"
 version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1820,7 +1829,9 @@ dependencies = [
  "deranged",
  "itoa",
  "js-sys",
+ "libc",
  "num-conv",
+ "num_threads",
  "powerfmt",
  "serde",
  "time-core",
@@ -1996,6 +2007,7 @@ dependencies = [
  "sharded-slab",
  "smallvec",
  "thread_local",
+ "time",
  "tracing",
  "tracing-core",
  "tracing-log",
@@ -2015,9 +2027,9 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
 name = "typespec"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "859b9d83198115b1db96c1bad5c53b684bdaae7cc8bb00a03f2e03549fe59ad5"
+checksum = "c2cb5cb7292822e6d81f385ce512e0a5936a8c93cb194d2ff41477dfd8d1e21f"
 dependencies = [
  "base64",
  "serde",
@@ -2027,9 +2039,9 @@ dependencies = [
 
 [[package]]
 name = "typespec_client_core"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2da9e6e81b951c2b53f0ea513b441f39a43d740190f05a80f4a3fcc5ed7596e"
+checksum = "1a543a33b2bd2b918a6f487522d4df324c194cc3e9ea89871a202dd237713a61"
 dependencies = [
  "async-trait",
  "base64",
@@ -2053,12 +2065,13 @@ dependencies = [
 
 [[package]]
 name = "typespec_macros"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6a0ba07066b3e2226f04261d2fba4976959ebe373ec1d34ed85d2e391f51d3e"
+checksum = "2e7ed5cbd82b54e3d7562822435165054822aa54ef30cd8600ed2202fe1b720c"
 dependencies = [
  "proc-macro2",
  "quote",
+ "rustc_version",
  "syn",
 ]
 

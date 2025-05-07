@@ -6,8 +6,12 @@ mod commands;
 use akv_cli::{ErrorKind, Result, ResultExt as _};
 use clap::Parser;
 use commands::Commands;
+use time::macros::format_description;
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
+use tracing_subscriber::{
+    fmt::{format::FmtSpan, time::LocalTime},
+    EnvFilter,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -28,9 +32,12 @@ async fn main() -> Result<()> {
     }
     tracing_subscriber::fmt()
         .with_env_filter(filter)
-        .with_span_events(FmtSpan::NEW)
+        .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .with_writer(std::io::stderr)
-        .without_time()
+        .with_timer(LocalTime::new(format_description!(
+            // cspell:disable-next-line
+            "[hour]:[minute]:[second].[subsecond digits:6]"
+        )))
         .init();
 
     args.handle().await
