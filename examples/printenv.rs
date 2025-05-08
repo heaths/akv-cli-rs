@@ -18,7 +18,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let mut vars: Vec<(String, String)> = if args.vars.is_empty() {
         env::vars_os()
-            .filter_map(|(k, v)| Some((k.into_string().ok()?, v.into_string().ok()?)))
+            .filter_map(|(k, v)| {
+                let key = k.into_string().ok()?;
+                if args.all || !key.starts_with("_") {
+                    return Some((key, v.into_string().ok()?));
+                }
+                None
+            })
             .collect()
     } else {
         let mut vars = Vec::new();
@@ -56,6 +62,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[derive(Debug, Parser)]
 struct Args {
+    /// Include all variables including those starting with "_".
+    #[arg(long)]
+    all: bool,
+
     /// Print colors.
     #[arg(short = 'c', long, default_value_t)]
     color: ColorChoice,
