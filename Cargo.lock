@@ -509,9 +509,9 @@ dependencies = [
 
 [[package]]
 name = "dotazure"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e7aff99d8c3cf3e96623e6eb4a99c174f8ed6e74038fe3746bcee01659ed363"
+checksum = "21fa497720bd34a8fe506da3aaa1451546d9e3862dc7bb8c849180c9a5901c8f"
 dependencies = [
  "dotenvy",
  "serde",

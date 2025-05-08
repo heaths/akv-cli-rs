@@ -17,7 +17,7 @@ use tracing_subscriber::{
 async fn main() -> Result<()> {
     // Load .env files only in debug builds.
     #[cfg(debug_assertions)]
-    dotazure::load().with_kind(ErrorKind::Io)?;
+    let loaded_env = dotazure::load().with_kind(ErrorKind::Io)?;
 
     let args = Args::parse();
     let verbosity = match args.verbose {
@@ -39,6 +39,10 @@ async fn main() -> Result<()> {
             "[hour]:[minute]:[second].[subsecond digits:6]"
         )))
         .init();
+
+    if loaded_env {
+        tracing::debug!("loaded environment variables from azd");
+    }
 
     args.handle().await
 }
