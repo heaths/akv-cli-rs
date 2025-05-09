@@ -2,9 +2,9 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use super::VAULT_ENV_NAME;
+use crate::credential;
 use akv_cli::Result;
 use azure_core::http::Url;
-use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::SecretClient;
 use clap::Parser;
 use std::{
@@ -52,7 +52,7 @@ impl Args {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = SecretClient::new(&vault, DefaultAzureCredential::new()?, None)?;
+        let client = SecretClient::new(&vault, credential()?, None)?;
         let secret = client
             .get_secret(&name, version.as_deref().unwrap_or_default(), None)
             .await?
