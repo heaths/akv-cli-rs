@@ -3,7 +3,6 @@
 
 use crate::pty::CommandExt as _;
 use akv_cli::{cache::ClientCache, ErrorKind, Result};
-use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::Parser;
 use std::{
@@ -16,6 +15,8 @@ use std::{
 };
 use tokio::sync::Mutex;
 use tracing::Level;
+
+use crate::credential;
 
 const MASK: &str = "<concealed by akv>";
 
@@ -47,7 +48,7 @@ impl Args {
             dotenvy::from_path_override(path)?;
         }
 
-        let credentials = DefaultAzureCredential::new()?;
+        let credential = credential()?;
         let mut cache = ClientCache::new();
         let secrets = Arc::new(Mutex::new(HashMap::<String, String>::new()));
 
@@ -74,7 +75,7 @@ impl Args {
             // Otherwise, fetch the secret and cache it by the URL.
             let client = cache
                 .get(&id.vault_url, |endpoint| {
-                    SecretClient::new(endpoint, credentials.clone(), None)
+                    SecretClient::new(endpoint, credential.clone(), None)
                 })
                 .await?;
 

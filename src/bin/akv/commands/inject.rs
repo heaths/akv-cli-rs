@@ -2,13 +2,13 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use super::VAULT_ENV_NAME;
+use crate::credential;
 use akv_cli::{
     cache::ClientCache,
     parsing::{replace_expressions, replace_vars},
     ErrorKind, Result,
 };
 use azure_core::http::Url;
-use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{ResourceId, SecretClient};
 use clap::Parser;
 use futures::FutureExt as _;
@@ -59,12 +59,12 @@ impl Args {
             }
         };
 
-        let credentials = DefaultAzureCredential::new()?;
+        let credential = credential()?;
         let mut cache = ClientCache::new();
         if let Some(vault) = self.vault.as_ref() {
             cache
                 .get(vault.as_str(), |endpoint| {
-                    SecretClient::new(endpoint, credentials.clone(), None)
+                    SecretClient::new(endpoint, credential.clone(), None)
                 })
                 .await?;
         };
@@ -72,7 +72,7 @@ impl Args {
         let mut buf = Vec::new();
         replace_expressions(&input, &mut buf, |expr| {
             let mut cache = cache.clone();
-            let credentials = credentials.clone();
+            let credentials = credential.clone();
 
             async move {
                 tracing::debug!("replacing expression {expr}");

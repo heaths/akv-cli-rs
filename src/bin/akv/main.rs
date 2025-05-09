@@ -9,8 +9,12 @@ mod pty;
 use akv_cli::Result;
 #[cfg(debug_assertions)]
 use akv_cli::{ErrorKind, ResultExt as _};
+use azure_core::credentials::TokenCredential;
+use azure_identity::{AzureDeveloperCliCredential, DefaultAzureCredential};
 use clap::Parser;
 use commands::Commands;
+use once_cell::sync::OnceCell;
+use std::sync::Arc;
 use time::macros::format_description;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{
@@ -48,6 +52,7 @@ async fn main() -> Result<()> {
     #[cfg(debug_assertions)]
     if loaded_env {
         tracing::debug!("loaded environment variables from azd");
+        let _ = CREDENTIAL.set(AzureDeveloperCliCredential::new(None)? as Arc<dyn TokenCredential>);
     }
 
     args.handle().await
@@ -68,4 +73,12 @@ impl Args {
     async fn handle(&self) -> Result<()> {
         self.command.handle().await
     }
+}
+
+static CREDENTIAL: OnceCell<Arc<dyn TokenCredential>> = OnceCell::new();
+
+pub(crate) fn credential() -> Result<Arc<dyn TokenCredential>> {
+    CREDENTIAL
+        .get_or_try_init(|| Ok(DefaultAzureCredential::new()?))
+        .cloned()
 }
