@@ -6,14 +6,18 @@ mod commands;
 use akv_cli::{ErrorKind, Result, ResultExt as _};
 use clap::Parser;
 use commands::Commands;
+use time::macros::format_description;
 use tracing::level_filters::LevelFilter;
-use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
+use tracing_subscriber::{
+    fmt::{format::FmtSpan, time::LocalTime},
+    EnvFilter,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Load .env files only in debug builds.
     #[cfg(debug_assertions)]
-    dotazure::load().with_kind(ErrorKind::Io)?;
+    let loaded_env = dotazure::load().with_kind(ErrorKind::Io)?;
 
     let args = Args::parse();
     let verbosity = match args.verbose {
@@ -28,10 +32,17 @@ async fn main() -> Result<()> {
     }
     tracing_subscriber::fmt()
         .with_env_filter(filter)
-        .with_span_events(FmtSpan::NEW)
+        .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .with_writer(std::io::stderr)
-        .without_time()
+        .with_timer(LocalTime::new(format_description!(
+            // cspell:disable-next-line
+            "[hour]:[minute]:[second].[subsecond digits:6]"
+        )))
         .init();
+
+    if loaded_env {
+        tracing::debug!("loaded environment variables from azd");
+    }
 
     args.handle().await
 }

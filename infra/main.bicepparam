@@ -4,7 +4,7 @@
 using './main.bicep'
 
 // cspell:ignore westus
-param environmentName = readEnvironmentVariable('AZURE_ENV_NAME', 'dev')
+param environmentName = readEnvironmentVariable('AZURE_ENV_NAME', 'akv-cli-dev')
 param location = readEnvironmentVariable('AZURE_LOCATION', 'westus')
 param principalId = readEnvironmentVariable('AZURE_PRINCIPAL_ID', '')
 param vaultName = readEnvironmentVariable('AZURE_KEYVAULT_NAME', '')

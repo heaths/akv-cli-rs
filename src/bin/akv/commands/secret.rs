@@ -150,10 +150,10 @@ impl Commands {
         let params = SetSecretParameters {
             value: Some(secret.0.to_string()),
             content_type: content_type.clone(),
-            tags: HashMap::from_iter(
+            tags: Some(HashMap::from_iter(
                 tags.iter()
                     .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
-            ),
+            )),
             ..Default::default()
         };
 
@@ -193,7 +193,7 @@ impl Commands {
         );
         let params = UpdateSecretPropertiesParameters {
             content_type: content_type.clone(),
-            tags,
+            tags: Some(tags),
             ..Default::default()
         };
 
@@ -460,8 +460,10 @@ fn show(secret: &Secret) -> Result<()> {
             .map_or_else(String::new, |s| s.into()),
     );
     println!("Tags:");
-    for (k, v) in &secret.tags {
-        println!("  {k}: {v}");
+    if let Some(tags) = &secret.tags {
+        for (k, v) in tags {
+            println!("  {k}: {v}");
+        }
     }
 
     Ok(())
