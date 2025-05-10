@@ -6,11 +6,12 @@
 mod commands;
 mod pty;
 
-use akv_cli::Result;
+use akv_cli::{credentials::DeveloperCredential, Result};
 #[cfg(debug_assertions)]
 use akv_cli::{ErrorKind, ResultExt as _};
 use azure_core::credentials::TokenCredential;
-use azure_identity::{AzureDeveloperCliCredential, DefaultAzureCredential};
+#[cfg(debug_assertions)]
+use azure_identity::AzureDeveloperCliCredential;
 use clap::Parser;
 use commands::Commands;
 use once_cell::sync::OnceCell;
@@ -79,6 +80,6 @@ static CREDENTIAL: OnceCell<Arc<dyn TokenCredential>> = OnceCell::new();
 
 pub(crate) fn credential() -> Result<Arc<dyn TokenCredential>> {
     CREDENTIAL
-        .get_or_try_init(|| Ok(DefaultAzureCredential::new()?))
+        .get_or_try_init(|| Ok(DeveloperCredential::new(None)))
         .cloned()
 }
