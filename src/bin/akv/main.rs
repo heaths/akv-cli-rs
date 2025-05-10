@@ -6,7 +6,9 @@
 mod commands;
 mod pty;
 
-use akv_cli::{ErrorKind, Result, ResultExt as _};
+use akv_cli::Result;
+#[cfg(debug_assertions)]
+use akv_cli::{ErrorKind, ResultExt as _};
 use clap::Parser;
 use commands::Commands;
 use time::macros::format_description;
@@ -43,6 +45,7 @@ async fn main() -> Result<()> {
         )))
         .init();
 
+    #[cfg(debug_assertions)]
     if loaded_env {
         tracing::debug!("loaded environment variables from azd");
     }
