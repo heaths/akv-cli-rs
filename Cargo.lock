@@ -32,6 +32,7 @@ version = "0.4.0"
 dependencies = [
  "anstream",
  "anstyle",
+ "async-lock",
  "async-stream",
  "async-trait",
  "azure_core",
