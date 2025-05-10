@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 mod commands;
+mod pty;
 
 use akv_cli::{ErrorKind, Result, ResultExt as _};
 use clap::Parser;

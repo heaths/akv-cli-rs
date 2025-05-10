@@ -6,7 +6,6 @@
 pub mod cache;
 mod error;
 pub mod parsing;
-pub mod pty;
 
 use async_stream::try_stream;
 use azure_core::http::{Model, Pager};
