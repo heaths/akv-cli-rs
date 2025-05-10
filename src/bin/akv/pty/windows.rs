@@ -4,7 +4,7 @@
 #![allow(non_camel_case_types, clippy::upper_case_acronyms)]
 
 // cspell:ignore hpcon hresult pseudoconsole
-use crate::{Error, ErrorKind};
+use akv_cli::{Error, ErrorKind};
 use std::{
     cmp, fmt, io,
     mem::{self, ManuallyDrop},

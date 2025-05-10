@@ -1,7 +1,10 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+#![cfg_attr(windows, feature(windows_process_extensions_raw_attribute))]
+
 mod commands;
+mod pty;
 
 use akv_cli::{ErrorKind, Result, ResultExt as _};
 use clap::Parser;
