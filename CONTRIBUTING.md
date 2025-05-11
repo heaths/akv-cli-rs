@@ -53,16 +53,29 @@ cargo run -- secret list
 cargo run -- read --name secret-1
 ```
 
-If you provision a vault using `azd`, a `.env` file is created under `.azure//dev/.env`, which debug builds
-of this project will read automatically. You can also create a `.env` file in the root containing
-an `AZURE_KEYVAULT_URL` environment variable set to your vault URL e.g.:
+If you provision a vault using `azd`, a `.env` file is created under `.azure/dev/.env`, which debug builds
+of this project will read automatically. Support for `.env` files is only compiled into debug builds for safety. Release builds require passing the vault URL
+to the `--vault` parameter.
 
-```text
-AZURE_KEYVAULT_URL=https://my-vault.vault.azure.net
+To provision secret variables for demonstration, source an appropriate setup script under the `examples/` directory:
+
+### Bash
+
+In bash - or almost any popular shell on linux or macOS:
+
+```bash
+# The script is not executable and requires sourcing.
+. ./examples/setup.sh
 ```
 
-Support for `.env` files is only compiled into debug builds for safety. Release builds require passing the vault URL
-to the `--vault` parameter.
+### PowerShell
+
+In PowerShell:
+
+```powershell
+# You can also invoke the script from within powershell.
+. ./examples/setup.ps1
+```
 
 [Azure CLI]: https://learn.microsoft.com/cli/azure/
 [Azure Developer CLI]: https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd
