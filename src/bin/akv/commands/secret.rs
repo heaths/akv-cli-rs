@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use super::VAULT_ENV_NAME;
+use crate::credential;
 use akv_cli::{
     list_items,
     parsing::{parse_key_value, parse_key_value_opt},
@@ -145,7 +146,7 @@ impl Commands {
         current.record("vault", vault.as_str());
         current.record("name", &secret.0);
 
-        let client = SecretClient::new(vault.as_str(), DefaultAzureCredential::new()?, None)?;
+        let client = SecretClient::new(vault.as_str(), credential()?, None)?;
 
         let params = SetSecretParameters {
             value: Some(secret.0.to_string()),
