@@ -116,14 +116,16 @@ type CredentialFn = (
 );
 
 static CREDENTIALS: LazyLock<Vec<CredentialFn>> = LazyLock::new(|| {
+    // Though az is likely more common, try azd first because it fails faster if even in $PATH.
+    // This is reverse of DefaultAzureCredential because azd was added long after az and compat was a concern.
     vec![
-        (
-            "AzureCliCredential",
-            Box::new(|options| Ok(AzureCliCredential::new(options.map(Into::into))?)),
-        ),
         (
             "AzureDeveloperCliCredential",
             Box::new(|options| Ok(AzureDeveloperCliCredential::new(options.map(Into::into))?)),
+        ),
+        (
+            "AzureCliCredential",
+            Box::new(|options| Ok(AzureCliCredential::new(options.map(Into::into))?)),
         ),
     ]
 });
