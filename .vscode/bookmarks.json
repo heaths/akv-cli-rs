@@ -1,0 +1,39 @@
+{
+	"files": [
+		{
+			"path": "src/bin/akv/commands/read.rs",
+			"bookmarks": [
+				{
+					"line": 54,
+					"column": 0,
+					"label": "1. Initialize client"
+				},
+				{
+					"line": 60,
+					"column": 0,
+					"label": "2. Print secret safely"
+				}
+			]
+		},
+		{
+			"path": "../../.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/azure_security_keyvault_secrets-0.3.0/src/generated/models/pub_models.rs",
+			"bookmarks": [
+				{
+					"line": 170,
+					"column": 38,
+					"label": "3. SafeDebug"
+				}
+			]
+		},
+		{
+			"path": "src/lib.rs",
+			"bookmarks": [
+				{
+					"line": 25,
+					"column": 7,
+					"label": "4. Pageables"
+				}
+			]
+		}
+	]
+}
