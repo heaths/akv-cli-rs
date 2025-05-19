@@ -18,6 +18,13 @@ While resources are provisioning - or in lieu of if already provisioned - talk a
 1Password CLI and can be used to rewrite configuration files to avoid storing secrets or set process environment
 variables ephemerally so secrets are available to other processes.
 
+### Presentation settings
+
+* Scaling: 125%
+* Resolution: 1920x1080
+* Editor font size: increase 4x
+* Terminal font size: increase 4x
+
 ## Code samples
 
 To navigate through bookmarks:
