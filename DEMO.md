@@ -58,3 +58,11 @@ To navigate through bookmarks:
     across numerous pages. Developers will also be able to iterate through pages if that works better for them.
 
     Long-running operations (LROs) will work similarly.
+
+## Crate samples
+
+Should we have time, we can review these samples:
+
+* Cosmos items: <https://github.com/Azure/azure-sdk-for-rust/blob/main/sdk/cosmos/azure_data_cosmos/examples/cosmos/read.rs>
+* Event Hubs producer: <https://github.com/Azure/azure-sdk-for-rust/blob/main/sdk/eventhubs/azure_messaging_eventhubs/examples/eventhubs_produce_messages.rs>
+* Event Hubs consumer: <https://github.com/Azure/azure-sdk-for-rust/blob/main/sdk/eventhubs/azure_messaging_eventhubs/examples/eventhubs_consume_messages.rs>
