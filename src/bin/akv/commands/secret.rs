@@ -4,7 +4,6 @@
 use super::VAULT_ENV_NAME;
 use crate::credential;
 use akv_cli::{
-    list_items,
     parsing::{parse_key_value, parse_key_value_opt},
     Result,
 };
@@ -248,16 +247,11 @@ impl Commands {
         Span::current().record("vault", vault.as_str());
 
         let client = SecretClient::new(vault.as_str(), DefaultAzureCredential::new()?, None)?;
-        let mut secrets: Vec<SecretProperties> =
-            list_items(async || client.list_secret_properties(None))
-                .try_filter(|props| {
-                    if *include_managed {
-                        return future::ready(true);
-                    }
-                    future::ready(!props.managed.unwrap_or_default())
-                })
-                .try_collect()
-                .await?;
+        let mut secrets: Vec<SecretProperties> = client
+            .list_secret_properties(None)?
+            .try_filter(|p| future::ready(*include_managed || !p.managed.unwrap_or_default()))
+            .try_collect()
+            .await?;
         secrets.sort_by(|a, b| a.id.cmp(&b.id));
 
         let mut table = Table::new();
@@ -331,10 +325,10 @@ impl Commands {
         current.record("version", version.as_deref());
 
         let client = SecretClient::new(&vault, DefaultAzureCredential::new()?, None)?;
-        let mut secrets: Vec<SecretProperties> =
-            list_items(async || client.list_secret_properties_versions(&name, None))
-                .try_collect()
-                .await?;
+        let mut secrets: Vec<SecretProperties> = client
+            .list_secret_properties_versions(&name, None)?
+            .try_collect()
+            .await?;
         secrets.sort_by(|a, b| {
             let a = a.attributes.as_ref().and_then(|x| x.updated);
             let b = b.attributes.as_ref().and_then(|x| x.updated);

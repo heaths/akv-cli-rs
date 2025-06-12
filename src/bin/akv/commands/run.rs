@@ -84,6 +84,7 @@ impl Args {
                 .await?
                 .into_body()
                 .await?;
+            tracing::debug!("retrieved {:?}", &secret);
 
             let Some(secret) = secret.value else {
                 // No value: should not happen, but is not fatal.
