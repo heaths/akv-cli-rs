@@ -3,7 +3,7 @@
 
 use async_lock::RwLock;
 use azure_core::{
-    credentials::{AccessToken, TokenCredential},
+    credentials::{AccessToken, TokenCredential, TokenRequestOptions},
     error::{Error, ErrorKind},
 };
 use azure_identity::{
@@ -30,21 +30,26 @@ impl DeveloperCredential {
 
 #[async_trait::async_trait]
 impl TokenCredential for DeveloperCredential {
-    async fn get_token(&self, scopes: &[&str]) -> azure_core::Result<AccessToken> {
+    async fn get_token(
+        &self,
+        scopes: &[&str],
+        options: Option<TokenRequestOptions>,
+    ) -> azure_core::Result<AccessToken> {
         if let Some(credential) = self.credential.read().await.as_ref() {
-            return credential.get_token(scopes).await;
+            return credential.get_token(scopes, options).await;
         }
 
         let mut lock = self.credential.write().await;
         if let Some(credential) = lock.as_ref() {
-            return credential.get_token(scopes).await;
+            return credential.get_token(scopes, options).await;
         }
 
         let mut errors = Vec::new();
         for (name, f) in CREDENTIALS.iter() {
+            let options = options.clone();
             match async {
                 match f(self.options.as_ref()) {
-                    Ok(c) => match c.get_token(scopes).await {
+                    Ok(c) => match c.get_token(scopes, options).await {
                         Ok(token) => {
                             tracing::debug!("acquired token");
                             *lock = Some(c);
@@ -87,12 +92,12 @@ pub struct DeveloperCredentialOptions {
 
 impl From<&DeveloperCredentialOptions> for AzureCliCredentialOptions {
     fn from(options: &DeveloperCredentialOptions) -> Self {
-        Self {
-            subscription: options.subscription.clone(),
-            tenant_id: options.tenant_id.clone(),
-            additionally_allowed_tenants: options.additionally_allowed_tenants.clone(),
-            ..Default::default()
-        }
+        let mut az_options = AzureCliCredentialOptions::default();
+        az_options.subscription = options.subscription.clone();
+        az_options.tenant_id = options.tenant_id.clone();
+        az_options.additionally_allowed_tenants = options.additionally_allowed_tenants.clone();
+
+        az_options
     }
 }
 
