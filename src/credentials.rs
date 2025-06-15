@@ -51,22 +51,22 @@ impl TokenCredential for DeveloperCredential {
                 match f(self.options.as_ref()) {
                     Ok(c) => match c.get_token(scopes, options).await {
                         Ok(token) => {
-                            tracing::debug!("acquired token");
+                            tracing::debug!(target: "akv::credentials", "acquired token");
                             *lock = Some(c);
                             Ok(token)
                         }
                         Err(err) => {
-                            tracing::debug!("failed acquiring token: {err}");
+                            tracing::debug!(target: "akv::credentials", "failed acquiring token: {err}");
                             Err(err)
                         }
                     },
                     Err(err) => {
-                        tracing::debug!("failed creating credential: {err}");
+                        tracing::debug!(target: "akv::credentials", "failed creating credential: {err}");
                         Err(err)
                     }
                 }
             }
-            .instrument(tracing::debug_span!("trying credential", name))
+            .instrument(tracing::debug_span!(target: "akv::credentials", "trying credential", name))
             .await
             {
                 Ok(token) => return Ok(token),

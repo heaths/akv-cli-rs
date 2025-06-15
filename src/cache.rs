@@ -29,13 +29,13 @@ impl ClientCache {
         let endpoint = Url::parse(endpoint.as_ref())?.to_string();
         let mut cache = self.cache.lock().await;
         if let Some(c) = cache.get(&endpoint) {
-            tracing::debug!("found cached client for '{vault}'", vault = &endpoint);
+            tracing::debug!(target: "akv::cache", "found cached client for '{vault}'", vault = &endpoint);
             return Ok(c.clone());
         };
 
         let client = Arc::new(f(&endpoint)?);
 
-        tracing::debug!("caching new client for '{vault}'", vault = &endpoint,);
+        tracing::debug!(target: "akv::cache", "caching new client for '{vault}'", vault = &endpoint,);
         cache.insert(endpoint, client.clone());
         Ok(client)
     }
