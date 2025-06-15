@@ -77,9 +77,21 @@ In PowerShell:
 . ./examples/setup.ps1
 ```
 
+## Troubleshooting
+
+To help troubleshoot issues, you can trace information to the terminal:
+
+```bash
+RUST_LOG=info,akv=debug cargo run -- secret list
+```
+
+The [`RUST_LOG`][RUST_LOG] environment variable here sets the default tracing level to `info`
+but `debug` for all `akv` traces.
+
 [Azure CLI]: https://learn.microsoft.com/cli/azure/
 [Azure Developer CLI]: https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd
 [Dev container]: https://code.visualstudio.com/docs/devcontainers/create-dev-container
 [GitHub Codespaces]: https://github.com/features/codespaces
 [Rust]: https://www.rust-lang.org
+[RUST_LOG]: https://docs.rs/env_logger/latest/env_logger/#enabling-logging
 [Visual Studio Code]: https://code.visualstudio.com
