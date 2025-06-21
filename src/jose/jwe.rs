@@ -74,20 +74,7 @@ impl Jwe {
 
 impl Encode for Jwe {
     fn decode(value: &str) -> Result<Self> {
-        let parts: Vec<_> = value.split(".").collect();
-        if parts.len() != 5 {
-            return Err(Error::with_message_fn(ErrorKind::InvalidData, || {
-                format!("invalid compact JWE: expected 5 parts, got {}", parts.len())
-            }));
-        }
-
-        Ok(Self {
-            header: Header::decode(parts[0])?,
-            cek: base64::decode_url_safe(parts[1])?.into(),
-            iv: base64::decode_url_safe(parts[2])?.into(),
-            ciphertext: base64::decode_url_safe(parts[3])?.into(),
-            tag: base64::decode_url_safe(parts[4])?.into(),
-        })
+        value.parse()
     }
 
     fn encode(&self) -> Result<String> {
@@ -105,6 +92,8 @@ impl Encode for Jwe {
 impl FromStr for Jwe {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self> {
+        const PARTS_ERROR: &str = "JWE must have exactly 5 parts separated by periods";
+
         fn is_base64url_char(c: char) -> bool {
             c.is_ascii_alphanumeric() || c == '-' || c == '_'
         }
@@ -115,7 +104,7 @@ impl FromStr for Jwe {
             if c == '.' {
                 if current_part_start >= 5 {
                     return Err(Error::with_message_fn(ErrorKind::InvalidData, || {
-                        "JWE must have exactly 4 periods (5 parts)"
+                        PARTS_ERROR
                     }));
                 }
 
@@ -130,7 +119,7 @@ impl FromStr for Jwe {
 
         if current_part_start != 4 {
             return Err(Error::with_message_fn(ErrorKind::InvalidData, || {
-                "JWE must have exactly 4 periods (5 parts)"
+                PARTS_ERROR
             }));
         }
 
@@ -409,10 +398,10 @@ mod tests {
     #[test]
     fn decode_invalid() {
         assert!(
-            matches!(Jwe::decode("1.2.3.4"), Err(err) if err.message() == Some("invalid compact JWE: expected 5 parts, got 4"))
+            matches!(Jwe::decode("1.2.3.4"), Err(err) if err.message() == Some("JWE must have exactly 5 parts separated by periods"))
         );
         assert!(
-            matches!(Jwe::decode("1.2.3.4.5.6"), Err(err) if err.message() == Some("invalid compact JWE: expected 5 parts, got 6"))
+            matches!(Jwe::decode("1.2.3.4.5.6"), Err(err) if err.message() == Some("JWE must have exactly 5 parts separated by periods"))
         );
     }
 
@@ -486,7 +475,7 @@ mod tests {
         assert!(matches!(err.kind(), ErrorKind::InvalidData));
         assert_eq!(
             err.message(),
-            Some("JWE must have exactly 4 periods (5 parts)")
+            Some("JWE must have exactly 5 parts separated by periods")
         );
     }
 
@@ -498,7 +487,7 @@ mod tests {
         assert!(matches!(err.kind(), ErrorKind::InvalidData));
         assert_eq!(
             err.message(),
-            Some("JWE must have exactly 4 periods (5 parts)")
+            Some("JWE must have exactly 5 parts separated by periods")
         );
     }
 
