@@ -49,8 +49,7 @@ jobs:
       if: runner.os == 'Windows'
       shell: cmd
       run: |
-        echo VCPKG_ROOT=%VCPKG_INSTALLATION_ROOT%>>%GITHUB_ENV%
-        vcpkg install openssl:x64-windows-static-md
+        echo OPENSSL_DIR=C:\Program Files\OpenSSL>>%GITHUB_ENV%
     - name: Test
       run: cargo test --all-features --workspace
 
