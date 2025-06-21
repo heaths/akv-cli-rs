@@ -45,6 +45,12 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Set up toolchain
       run: rustup install
+    - name: Install openssl (Windows)
+      if: runner.os == 'Windows'
+      shell: cmd
+      run: |
+        echo VCPKG_ROOT=%VCPKG_INSTALLATION_ROOT%>>%GITHUB_ENV%
+        vcpkg install openssl:x64-windows-static-md
     - name: Test
       run: cargo test --all-features --workspace
 
