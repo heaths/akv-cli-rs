@@ -50,8 +50,13 @@ url = "2.5.4"
 anstream = "0.6.18"
 anstyle = "1.0.10"
 async-trait = "0.1.88"
+criterion = "0.6.0"
 
 [profile.release]
 opt-level = "s"
 panic = "abort"
 strip = "debuginfo"
+
+[[bench]]
+name = "jwe"
+harness = false
