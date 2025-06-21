@@ -3,7 +3,7 @@
 [![releases](https://img.shields.io/github/v/release/heaths/akv-cli-rs.svg?logo=github)](https://github.com/heaths/akv-cli-rs/releases/latest)
 [![ci](https://github.com/heaths/akv-cli-rs/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/heaths/akv-cli-rs/actions/workflows/ci.yml)
 
-The Azure Key Vault CLI can be used to read secrets, pass them securely to other commands, or inject them into configuration files.
+The Azure Key Vault CLI can be used to read and decrypt secrets, pass them securely to other commands, or inject them into configuration files.
 
 ## Installation
 
@@ -29,7 +29,7 @@ cargo install akv-cli
 
 ## Using
 
-Inspired by the [1Password CLI], you can use similar commands to pull secrets from [Azure Key Vault].
+Inspired by the [1Password CLI], you can use similar commands to read and decrypt secrets and from [Azure Key Vault].
 Though the crate is named `akv-cli`, note that the actual program is named `akv`.
 
 Some arguments can read environment variables, e.g., `--vault` which reads from `AZURE_KEYVAULT_URL`.
@@ -78,10 +78,10 @@ akv read https://my-vault.vault.azure.net/secrets/my-secret/746984e474594896aad9
 
 ### Passing secrets to new processes
 
-You can start a process that reads environment variables containing URLs to secrets instead of keeping secrets in environment variables that any process can read.
+You can start a process that reads environment variables containing URLs to secrets or compact JSON Web Encryption (JWE) tokens instead of keeping secrets in environment variables that any process can read.
 
-Environment variables can contain only a URL to a secret.
-Secrets read from Azure Key Vault will be masked in stdout and stderr unless you pass `--no-masking`.
+Environment variables can contain only a URL to a secret or compact JWE.
+Secrets read or decrypted from Azure Key Vault will be masked in stdout and stderr unless you pass `--no-masking`.
 
 ```bash
 export SECRET_VAR=https://my-vault.vault.azure.net/secrets/my-secret

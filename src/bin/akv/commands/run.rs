@@ -1,9 +1,12 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use crate::pty::CommandExt as _;
-use akv_cli::{cache::ClientCache, ErrorKind, Result};
-use azure_security_keyvault_secrets::{ResourceId, SecretClient};
+use crate::{credential, pty::CommandExt as _};
+use akv_cli::{cache::ClientCache, jose::Jwe, ErrorKind, Result};
+use azure_security_keyvault_keys::{
+    models::KeyOperationParameters, KeyClient, ResourceId as KeyResourceId,
+};
+use azure_security_keyvault_secrets::{ResourceId as SecretResourceId, SecretClient};
 use clap::Parser;
 use std::{
     collections::HashMap,
@@ -15,8 +18,6 @@ use std::{
 };
 use tokio::sync::Mutex;
 use tracing::Level;
-
-use crate::credential;
 
 const MASK: &str = "<concealed by akv>";
 
@@ -49,50 +50,101 @@ impl Args {
         }
 
         let credential = credential()?;
-        let cache = ClientCache::new();
+        let key_client_cache = ClientCache::new();
+        let secret_client_cache = ClientCache::new();
         let secrets = Arc::new(Mutex::new(HashMap::<String, String>::new()));
 
-        // Replace any env var containing only a Key Vault URI with its value.
         // Keep track of which values we replace to mask them later.
         for (name, value) in env::vars_os() {
             let Ok(value) = value.into_string() else {
                 continue;
             };
 
-            let Ok(id) = value.parse::<ResourceId>() else {
-                continue;
-            };
+            // First, try to parse as a Key Vault secret URI.
+            if let Ok(id) = value.parse::<SecretResourceId>() {
+                tracing::debug!("replacing environment variable {name:?} from {value}");
+                let mut secrets = secrets.lock().await;
 
-            tracing::debug!("replacing environment variable {name:?} from {value}");
-            let mut secrets = secrets.lock().await;
+                // Use a cached secret if available.
+                if let Some(secret) = secrets.get(&value) {
+                    env::set_var(&name, secret.as_str());
+                    continue;
+                }
 
-            // Use a cached secret if available.
-            if let Some(secret) = secrets.get(&value) {
-                env::set_var(name, secret.as_str());
+                // Otherwise, fetch the secret and cache it by the URL.
+                let client = secret_client_cache
+                    .get(&id.vault_url, |endpoint| {
+                        SecretClient::new(endpoint, credential.clone(), None)
+                    })
+                    .await?;
+                let secret = client
+                    .get_secret(&id.name, id.version.as_deref().unwrap_or_default(), None)
+                    .await?
+                    .into_body()
+                    .await?;
+
+                tracing::debug!("retrieved {:?}", &secret);
+                let Some(secret) = secret.value else {
+                    // No value: should not happen, but is not fatal.
+                    continue;
+                };
+
+                env::set_var(&name, secret.as_str());
+                secrets.insert(value, secret);
+
                 continue;
             }
 
-            // Otherwise, fetch the secret and cache it by the URL.
-            let client = cache
-                .get(&id.vault_url, |endpoint| {
-                    SecretClient::new(endpoint, credential.clone(), None)
-                })
-                .await?;
+            // Second, try to parse as a JWE.
+            if let Ok(jwe) = value.parse::<Jwe>() {
+                tracing::debug!("decrypting environment variable {name:?}");
+                let mut secrets = secrets.lock().await;
 
-            let secret = client
-                .get_secret(&id.name, id.version.as_deref().unwrap_or_default(), None)
-                .await?
-                .into_body()
-                .await?;
-            tracing::debug!("retrieved {:?}", &secret);
+                // Use a cached JWE if available.
+                if let Some(secret) = secrets.get(&value) {
+                    env::set_var(&name, secret.as_str());
+                    continue;
+                }
 
-            let Some(secret) = secret.value else {
-                // No value: should not happen, but is not fatal.
+                // Otherwise, decrypt the JWE and cache it by its compact form.
+                let plaintext = jwe
+                    .decrypt(async |kid, alg, cek| {
+                        let KeyResourceId {
+                            vault_url,
+                            name,
+                            version,
+                            ..
+                        } = kid.parse()?;
+                        let version = version.as_deref().unwrap_or_default();
+                        let client = key_client_cache
+                            .get(vault_url, |endpoint| {
+                                KeyClient::new(endpoint, credential.clone(), None)
+                            })
+                            .await?;
+                        let params = KeyOperationParameters {
+                            algorithm: Some(alg.try_into()?),
+                            value: Some(cek.into()),
+                            ..Default::default()
+                        };
+                        client
+                            .unwrap_key(&name, version, params.try_into()?, None)
+                            .await?
+                            .into_body()
+                            .await?
+                            .try_into()
+                    })
+                    .await?;
+
+                let Ok(plaintext) = String::from_utf8(plaintext.to_vec()) else {
+                    tracing::warn!(target: "akv", "cannot decrypt {name:?} to valid string");
+                    continue;
+                };
+
+                env::set_var(&name, plaintext.as_str());
+                secrets.insert(value, plaintext);
+
                 continue;
-            };
-
-            env::set_var(name, secret.as_str());
-            secrets.insert(value, secret);
+            }
         }
 
         // Copy the values for faster access.

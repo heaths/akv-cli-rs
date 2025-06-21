@@ -1,6 +1,8 @@
 // Copyright 2024 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+use azure_security_keyvault_keys::KeyClient;
+use azure_security_keyvault_secrets::SecretClient;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 use url::Url;
@@ -11,7 +13,7 @@ pub struct ClientCache<T> {
     cache: Arc<Mutex<HashMap<String, Arc<T>>>>,
 }
 
-impl<T> ClientCache<T> {
+impl<T: TypeName> ClientCache<T> {
     pub fn new() -> Self {
         Self {
             cache: Default::default(),
@@ -26,13 +28,13 @@ impl<T> ClientCache<T> {
         let endpoint = Url::parse(endpoint.as_ref())?.to_string();
         let mut cache = self.cache.lock().await;
         if let Some(c) = cache.get(&endpoint) {
-            tracing::debug!(target: "akv::cache", "found cached client for '{vault}'", vault = &endpoint);
+            tracing::debug!(target: "akv::cache", "found cached {client} for '{vault}'", client = T::type_name(), vault = &endpoint);
             return Ok(c.clone());
         };
 
         let client = Arc::new(f(&endpoint)?);
 
-        tracing::debug!(target: "akv::cache", "caching new client for '{vault}'", vault = &endpoint,);
+        tracing::debug!(target: "akv::cache", "caching new {client} for '{vault}'", client = T::type_name(), vault = &endpoint,);
         cache.insert(endpoint, client.clone());
         Ok(client)
     }
@@ -45,6 +47,23 @@ impl<T> Clone for ClientCache<T> {
         }
     }
 }
+
+pub trait TypeName {
+    fn type_name() -> &'static str;
+}
+
+impl TypeName for KeyClient {
+    fn type_name() -> &'static str {
+        "KeyClient"
+    }
+}
+
+impl TypeName for SecretClient {
+    fn type_name() -> &'static str {
+        "SecretClient"
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

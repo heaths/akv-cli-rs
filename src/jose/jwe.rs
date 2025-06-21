@@ -74,20 +74,7 @@ impl Jwe {
 
 impl Encode for Jwe {
     fn decode(value: &str) -> Result<Self> {
-        let parts: Vec<_> = value.split(".").collect();
-        if parts.len() != 5 {
-            return Err(Error::with_message_fn(ErrorKind::InvalidData, || {
-                format!("invalid compact JWE: expected 5 parts, got {}", parts.len())
-            }));
-        }
-
-        Ok(Self {
-            header: Header::decode(parts[0])?,
-            cek: base64::decode_url_safe(parts[1])?.into(),
-            iv: base64::decode_url_safe(parts[2])?.into(),
-            ciphertext: base64::decode_url_safe(parts[3])?.into(),
-            tag: base64::decode_url_safe(parts[4])?.into(),
-        })
+        value.parse()
     }
 
     fn encode(&self) -> Result<String> {
