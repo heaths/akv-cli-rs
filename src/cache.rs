@@ -18,7 +18,7 @@ impl<T> ClientCache<T> {
         }
     }
 
-    pub async fn get<F>(&mut self, endpoint: impl AsRef<str>, f: F) -> crate::Result<Arc<T>>
+    pub async fn get<F>(&self, endpoint: impl AsRef<str>, f: F) -> crate::Result<Arc<T>>
     where
         F: FnOnce(&str) -> azure_core::Result<T>,
     {
@@ -55,7 +55,7 @@ mod tests {
     async fn test_client_cache() {
         let credential = DefaultAzureCredential::new().unwrap();
 
-        let mut cache = ClientCache::<SecretClient>::new();
+        let cache = ClientCache::<SecretClient>::new();
         cache
             .get("https://vault1.vault.azure.net", |endpoint| {
                 SecretClient::new(endpoint, credential.clone(), None)

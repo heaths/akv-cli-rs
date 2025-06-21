@@ -49,7 +49,7 @@ pub struct Header {
     #[serde(rename = "enc", skip_serializing_if = "Option::is_none")]
     pub enc: Option<EncryptionAlgorithm>,
 
-    /// They ID of the key in Key Vault used for [`Header::alg`].
+    /// The ID of the key in Key Vault used for [`Header::alg`].
     #[serde(rename = "kid", skip_serializing_if = "Option::is_none")]
     pub kid: Option<String>,
 
