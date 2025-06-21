@@ -4,6 +4,7 @@
 pub mod cache;
 pub mod credentials;
 mod error;
+pub mod jose;
 pub mod parsing;
 
 pub use error::*;

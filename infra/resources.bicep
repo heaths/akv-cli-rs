@@ -61,11 +61,20 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
       value: jwt
     }
   }
+
+  resource dek 'keys' = {
+    name: 'dek'
+    properties: {
+      kty: 'RSA'
+      keySize: 2048
+    }
+  }
 }
 
 var kvSecretsOfficerDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')
+var kvKeysOfficerDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '14b46e9e-c2b7-41b4-b07b-48a6ebf60603')
 
-resource rbac 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource kvSecretsOfficerRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(resourceGroup().id, environmentName, principalId, kvSecretsOfficerDefinitionId)
   scope: kv
   properties: {
@@ -74,6 +83,15 @@ resource rbac 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
+resource kvKeysOfficerRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(resourceGroup().id, environmentName, principalId, kvKeysOfficerDefinitionId)
+  properties: {
+    roleDefinitionId: kvKeysOfficerDefinitionId
+    principalId: principalId
+  }
+}
+
 output AZURE_PRINCIPAL_ID string = principalId
 output AZURE_KEYVAULT_NAME string = kv.name
 output AZURE_KEYVAULT_URL string = kv.properties.vaultUri
+output AZURE_KEYVAULT_DEK_URL string = kv::dek.properties.keyUri

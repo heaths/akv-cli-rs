@@ -60,7 +60,7 @@ impl Args {
         };
 
         let credential = credential()?;
-        let mut cache = ClientCache::new();
+        let mut cache = ClientCache::<SecretClient>::new();
         if let Some(vault) = self.vault.as_ref() {
             cache
                 .get(vault.as_str(), |endpoint| {

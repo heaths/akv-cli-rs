@@ -14,11 +14,14 @@
     "debuginfo",
     "deque",
     "dotenv",
+    "encryptor",
     "libc",
     "lldb",
+    "oaep",
     "repr",
     "rustlang",
-    "rustup"
+    "rustup",
+    "symm"
   ],
   "dictionaryDefinitions": [
     {
@@ -28,6 +31,7 @@
         "anstyle",
         "dotazure",
         "dotenvy",
+        "rand_chacha",
         "reqwest",
         "prettytable",
         "serde",

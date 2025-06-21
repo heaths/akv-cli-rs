@@ -43,3 +43,4 @@ output AZURE_PRINCIPAL_ID string = resources.outputs.AZURE_PRINCIPAL_ID
 output AZURE_RESOURCE_GROUP string = rg.name
 output AZURE_KEYVAULT_NAME string = resources.outputs.AZURE_KEYVAULT_NAME
 output AZURE_KEYVAULT_URL string = resources.outputs.AZURE_KEYVAULT_URL
+output AZURE_KEYVAULT_DEK_URL string = resources.outputs.AZURE_KEYVAULT_DEK_URL
