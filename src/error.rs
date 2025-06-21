@@ -186,6 +186,12 @@ impl From<dotenvy::Error> for Error {
     }
 }
 
+impl From<openssl::error::ErrorStack> for Error {
+    fn from(error: openssl::error::ErrorStack) -> Self {
+        Self::new(ErrorKind::Other, error)
+    }
+}
+
 impl From<url::ParseError> for Error {
     fn from(error: url::ParseError) -> Self {
         Self::new(ErrorKind::InvalidData, error)

@@ -49,7 +49,7 @@ impl Args {
         }
 
         let credential = credential()?;
-        let mut cache = ClientCache::new();
+        let cache = ClientCache::new();
         let secrets = Arc::new(Mutex::new(HashMap::<String, String>::new()));
 
         // Replace any env var containing only a Key Vault URI with its value.

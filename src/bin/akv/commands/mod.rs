@@ -1,6 +1,8 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+mod decrypt;
+mod encrypt;
 mod inject;
 mod read;
 mod run;
@@ -30,6 +32,12 @@ pub enum Commands {
     /// Pass secrets in environment variables to a process.
     Run(run::Args),
 
+    /// Encrypt content to a compact JSON Web Encryption (JWE) token.
+    Encrypt(encrypt::Args),
+
+    /// Decrypt a compact JSON Web Encryption (JWE) token.
+    Decrypt(decrypt::Args),
+
     /// Generates completion scripts for supported shells.
     Completion {
         /// The shell script to generate.
@@ -45,6 +53,8 @@ impl Commands {
             Commands::Inject(args) => args.inject().await,
             Commands::Read(args) => args.read().await,
             Commands::Run(args) => args.run().await,
+            Commands::Encrypt(args) => args.encrypt().await,
+            Commands::Decrypt(args) => args.decrypt().await,
             Commands::Completion { shell } => {
                 let mut cmd = super::Args::command();
                 let bin_name = cmd.get_name().to_string();

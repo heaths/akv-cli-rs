@@ -60,7 +60,7 @@ impl Args {
         };
 
         let credential = credential()?;
-        let mut cache = ClientCache::new();
+        let cache = ClientCache::<SecretClient>::new();
         if let Some(vault) = self.vault.as_ref() {
             cache
                 .get(vault.as_str(), |endpoint| {
@@ -71,7 +71,7 @@ impl Args {
 
         let mut buf = Vec::new();
         replace_expressions(&input, &mut buf, |expr| {
-            let mut cache = cache.clone();
+            let cache = cache.clone();
             let credentials = credential.clone();
 
             async move {

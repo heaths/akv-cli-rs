@@ -90,6 +90,24 @@ akv run -- printenv SECRET_VAR
 akv run --no-masking -- printenv SECRET_VAR
 ```
 
+### Encrypting and decrypting secrets
+
+You can encrypt secrets to store as compact JSON Web Encryption (JWE) tokens.
+A content encryption key (CEK) is generated and encrypted (wrapped) by Key Vault.
+The CEK is used to encrypt your secrets, and the encrypted CEK along with the full key ID including the version
+are encoded within the compact JWE.
+
+```bash
+export AZURE_KEYVAULT_URL=https://my-vault.vault.azure.net
+
+JWE=$(akv encrypt --name my-key 'plaintext')
+akv decrypt $JWE
+```
+
+If you do not pass a `--version`, the latest key version is used to encrypt; however,
+the full key ID including the version used is encoded to make sure that you can decrypt your data
+even if your key has been rotated.
+
 ### Managing secrets
 
 You can create, get, edit, and list secrets e.g.,
