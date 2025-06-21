@@ -3,7 +3,7 @@
 
 use crate::{
     jose::{Algorithm, Encode, EncryptionAlgorithm, Header, Set, Type, Unset},
-    Error, ErrorKind, Result,
+    Error, ErrorKind, Result, ResultExt as _,
 };
 use azure_core::{base64, Bytes};
 use azure_security_keyvault_keys::models::KeyOperationResult;
@@ -11,7 +11,7 @@ use openssl::{
     rand,
     symm::{self, Cipher},
 };
-use std::marker::PhantomData;
+use std::{marker::PhantomData, str::FromStr};
 
 /// A JSON Web Encryption (JWE) structure.
 #[derive(Debug)]
@@ -99,6 +99,70 @@ impl Encode for Jwe {
             base64::encode_url_safe(&self.tag),
         ]
         .join("."))
+    }
+}
+
+impl FromStr for Jwe {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
+        fn is_base64url_char(c: char) -> bool {
+            c.is_ascii_alphanumeric() || c == '-' || c == '_'
+        }
+
+        let mut parts = [0usize; 6];
+        let mut current_part_start = 0;
+        for (i, c) in s.char_indices() {
+            if c == '.' {
+                if current_part_start >= 5 {
+                    return Err(Error::with_message_fn(ErrorKind::InvalidData, || {
+                        "JWE must have exactly 4 periods (5 parts)"
+                    }));
+                }
+
+                parts[current_part_start + 1] = i + 1;
+                current_part_start += 1;
+            } else if !is_base64url_char(c) {
+                return Err(Error::with_message_fn(ErrorKind::InvalidData, || {
+                    "invalid character in JWE compact serialization"
+                }));
+            }
+        }
+
+        if current_part_start != 4 {
+            return Err(Error::with_message_fn(ErrorKind::InvalidData, || {
+                "JWE must have exactly 4 periods (5 parts)"
+            }));
+        }
+
+        parts[5] = s.len() + 1;
+        let header = &s[parts[0]..parts[1] - 1];
+        let cek = &s[parts[1]..parts[2] - 1];
+        let iv = &s[parts[2]..parts[3] - 1];
+        let ciphertext = &s[parts[3]..parts[4] - 1];
+        let tag = &s[parts[4]..parts[5] - 1];
+
+        let header =
+            Header::decode(header).with_context_fn(ErrorKind::InvalidData, || "invalid header")?;
+        let cek = base64::decode_url_safe(cek)
+            .with_context_fn(ErrorKind::InvalidData, || "invalid cek")?
+            .into();
+        let iv = base64::decode_url_safe(iv)
+            .with_context_fn(ErrorKind::InvalidData, || "invalid iv")?
+            .into();
+        let ciphertext = base64::decode_url_safe(ciphertext)
+            .with_context_fn(ErrorKind::InvalidData, || "invalid ciphertext")?
+            .into();
+        let tag = base64::decode_url_safe(tag)
+            .with_context_fn(ErrorKind::InvalidData, || "invalid tag")?
+            .into();
+
+        Ok(Jwe {
+            header,
+            cek,
+            iv,
+            ciphertext,
+            tag,
+        })
     }
 }
 
@@ -388,6 +452,64 @@ mod tests {
             Bytes::from_static(&[0x01, 0x23, 0x45, 0x67])
         );
         assert_eq!(decoded.tag, Bytes::from_static(&[0x89, 0xab, 0xcd, 0xef]));
+    }
+
+    #[test]
+    fn from_str_success() {
+        // cspell:disable-next-line
+        let s = "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMTI4R0NNIiwia2lkIjoidGVzdC1rZXktaWQiLCJ0eXAiOiJKV0UifQ.EjRWeA.mrze8A.ASNFZw.iavN7w";
+        let jwe = Jwe::from_str(s).expect("should parse valid JWE");
+        assert_eq!(jwe.header.alg, Algorithm::RSA_OAEP_256);
+        assert_eq!(jwe.header.enc, Some(EncryptionAlgorithm::A128GCM));
+        assert_eq!(jwe.header.kid, Some("test-key-id".to_string()));
+        assert_eq!(jwe.header.typ, Type::JWE);
+    }
+
+    #[test]
+    fn from_str_invalid_character() {
+        // Insert an invalid character ('!') in the cek part
+        // cspell:disable-next-line
+        let s = "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMTI4R0NNIiwia2lkIjoidGVzdC1rZXktaWQiLCJ0eXAiOiJKV0UifQ.EjRW!eA.mrze8A.ASNFZw.iavN7w";
+        let err = Jwe::from_str(s).unwrap_err();
+        assert!(matches!(err.kind(), ErrorKind::InvalidData));
+        assert_eq!(
+            err.message(),
+            Some("invalid character in JWE compact serialization")
+        );
+    }
+
+    #[test]
+    fn from_str_too_few_periods() {
+        // Only 3 periods (4 parts)
+        let s = "a.b.c.d";
+        let err = Jwe::from_str(s).unwrap_err();
+        assert!(matches!(err.kind(), ErrorKind::InvalidData));
+        assert_eq!(
+            err.message(),
+            Some("JWE must have exactly 4 periods (5 parts)")
+        );
+    }
+
+    #[test]
+    fn from_str_too_many_periods() {
+        // 5 periods (6 parts)
+        let s = "a.b.c.d.e.f";
+        let err = Jwe::from_str(s).unwrap_err();
+        assert!(matches!(err.kind(), ErrorKind::InvalidData));
+        assert_eq!(
+            err.message(),
+            Some("JWE must have exactly 4 periods (5 parts)")
+        );
+    }
+
+    #[test]
+    fn from_str_invalid_header() {
+        // Valid base64url, but not a valid header
+        // cspell:disable-next-line
+        let s = "Zm9vYmFy.EjRWeA.mrze8A.ASNFZw.iavN7w";
+        let err = Jwe::from_str(s).unwrap_err();
+        assert!(matches!(err.kind(), ErrorKind::InvalidData));
+        assert_eq!(err.message(), Some("invalid header"));
     }
 
     #[test]
