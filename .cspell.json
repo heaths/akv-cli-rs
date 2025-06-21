@@ -10,6 +10,7 @@
     "rust-toolchain.toml"
   ],
   "words": [
+    "ciphertext",
     "clippy",
     "debuginfo",
     "deque",
