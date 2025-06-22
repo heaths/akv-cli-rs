@@ -108,6 +108,9 @@ If you do not pass a `--version`, the latest key version is used to encrypt; how
 the full key ID including the version used is encoded to make sure that you can decrypt your data
 even if your key has been rotated.
 
+You can also encrypt files. Pass a path to `--in-file` or `-` to read from `stdin`.
+Note that if you encrypt binary data, you cannot decrypt it to `stdout` but can write it to a file using `decrypt --out-file`.
+
 ### Managing secrets
 
 You can create, get, edit, and list secrets e.g.,

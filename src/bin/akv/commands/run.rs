@@ -136,7 +136,7 @@ impl Args {
                     .await?;
 
                 let Ok(plaintext) = String::from_utf8(plaintext.to_vec()) else {
-                    tracing::warn!(target: "akv", "cannot decrypt {name:?} to valid string");
+                    tracing::warn!(target: "akv", "cannot decrypt {name:?} into valid string");
                     continue;
                 };
 

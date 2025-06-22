@@ -23,7 +23,7 @@ pub struct Args {
     /// The JWE must specify a key ID including a version referencing Key Vault,
     /// and must use support algorithms supported by Key Vault. See `encrypt --help` for details.
     #[arg()]
-    content: String,
+    value: String,
 
     /// Do not print a new line after the content.
     #[arg(short = 'n', long)]
@@ -43,7 +43,7 @@ impl Args {
     pub async fn decrypt(&self) -> Result<()> {
         let span = Span::current();
 
-        let jwe = Jwe::decode(&self.content)?;
+        let jwe = Jwe::decode(&self.value)?;
         let plaintext = jwe
             .decrypt(async |kid, alg, cek| {
                 let kid: Url = kid.parse()?;
