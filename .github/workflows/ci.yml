@@ -42,19 +42,19 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Set up toolchain
       run: rustup install
     - name: Install openssl (Windows)
       if: runner.os == 'Windows'
-      shell: cmd
       run: |
-        echo OPENSSL_DIR=C:\Program Files\OpenSSL>>%GITHUB_ENV%
+        echo "OPENSSL_DIR=C:\Program Files\OpenSSL" >> $GITHUB_ENV
     - name: Test
       run: cargo test --all-features --workspace
 
   analyze:
     runs-on: ubuntu-latest
+    if: ${{ !inputs.release || github.event_name != 'workflow_call' }}
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -71,7 +71,6 @@ jobs:
     - name: Set up toolchain
       run: rustup install
     - name: Check formatting
-      if: ${{ success() && (!inputs.release || github.event_name != 'workflow_call') }}
       run: cargo fmt --all -- --check
     - name: Lint
       run: cargo clippy --all-features --all-targets --no-deps --workspace
