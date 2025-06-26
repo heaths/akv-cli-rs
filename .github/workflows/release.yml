@@ -6,7 +6,9 @@ on:
     - "v*"
 
 permissions:
+  attestations: write
   contents: write
+  id-token: write
 
 defaults:
   run:
@@ -22,7 +24,7 @@ jobs:
     with:
       release: true
 
-  publish:
+  release:
     runs-on: ubuntu-latest
     needs: test
     steps:
@@ -37,6 +39,88 @@ jobs:
       run: gh release create ${{ github.ref_name }} --generate-notes
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  package:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+        - macos-13
+        - macos-14
+        - macos-15
+        - ubuntu-22.04
+        - ubuntu-22.04-arm
+        - windows-2022
+        - windows-11-arm
+        include:
+        - os: windows-2022
+          extension: '.exe'
+        - os: windows-11-arm
+          extension: '.exe'
+    needs: release
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Set up toolchain
+      run: rustup install
+    - name: Install openssl (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        echo "OPENSSL_DIR=C:\Program Files\OpenSSL" >> $GITHUB_ENV
+    - name: Build
+      run: cargo build --release --all-features --workspace
+    - name: Package
+      id: package
+      run: |
+        NAME=$(echo 'akv-${{ runner.os }}-${{ runner.arch }}' | awk '{sub(/x64/, "amd64"); print tolower($0)}')
+        if [ '${{ runner.os }}' == 'Windows' ]; then
+          NAME="${NAME}.zip"
+          TARGET="target/release/${NAME}"
+          zip -j "${TARGET}" target/release/akv
+        else
+          NAME="${NAME}.tar.gz"
+          TARGET="target/release/${NAME}"
+          tar czf "${TARGET}" -C target/release/ akv${{ matrix.extension }}
+        fi
+        echo "name=${NAME}" >> $GITHUB_OUTPUT
+        echo "target=${TARGET}" >> $GITHUB_OUTPUT
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: steps.package.outputs.name
+        path: steps.package.outputs.target
+
+  attest:
+    runs-on: ubuntu-latest
+    needs: package
+    steps:
+    - name: Download
+      uses: actions/download-artifact@v4
+    - name: Attest
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: ${{ github.workspace }}/*
+
+  # Publish separately to crates.io to allow retries e.g., expired token.
+  publish:
+    if: false
+    runs-on: ubuntu-latest
+    needs: release
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Set up toolchain
+      run: rustup install
     - name: Publish
       run: cargo publish
       env:
