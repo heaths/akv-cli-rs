@@ -82,24 +82,25 @@ jobs:
       run: cargo build --release --all-features --workspace
     - name: Package
       id: package
+      shell: pwsh
       run: |
-        NAME=$(echo 'akv-${{ runner.os }}-${{ runner.arch }}' | awk '{sub(/x64/, "amd64"); print tolower($0)}')
-        if [ '${{ runner.os }}' == 'Windows' ]; then
-          NAME="${NAME}.zip"
-          TARGET="target/release/${NAME}"
-          zip -j "${TARGET}" target/release/akv
-        else
-          NAME="${NAME}.tar.gz"
-          TARGET="target/release/${NAME}"
-          tar czf "${TARGET}" -C target/release/ akv${{ matrix.extension }}
-        fi
-        echo "name=${NAME}" >> $GITHUB_OUTPUT
-        echo "target=${TARGET}" >> $GITHUB_OUTPUT
+        $name = 'akv-${{ runner.os }}-${{ runner.arch }}'.ToLowerInvariant() -replace 'x64', 'amd64'
+        if ('${{ runner.os }}' -eq 'Windows') {
+          $name = "$name.zip"
+          $target = "target/release/$name"
+          Compress-Archive -Path target/release/akv${{ matrix.extension }} -DestinationPath $target
+        } else {
+          $name = "$name.tar.gz"
+          $target = "target/release/$name"
+          tar czf "$target" -C target/release/ akv${{ matrix.extension }}
+        }
+        "name=$name" >> $env:GITHUB_OUTPUT
+        "target=$target" >> $env:GITHUB_OUTPUT
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
-        name: steps.package.outputs.name
-        path: steps.package.outputs.target
+        name: ${{ steps.package.outputs.name }}
+        path: ${{ steps.package.outputs.target }}
 
   attest:
     runs-on: ubuntu-latest
