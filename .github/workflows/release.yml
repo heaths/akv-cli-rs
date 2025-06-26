@@ -45,9 +45,8 @@ jobs:
     strategy:
       matrix:
         os:
-        - macos-13
-        - macos-14
-        - macos-15
+        - macos-13 # amd64
+        - macos-14 # arm64
         - ubuntu-22.04
         - ubuntu-22.04-arm
         - windows-2022
