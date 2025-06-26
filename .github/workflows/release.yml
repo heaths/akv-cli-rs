@@ -118,7 +118,6 @@ jobs:
 
   # Publish separately to crates.io to allow retries e.g., expired token.
   publish:
-    if: false
     runs-on: ubuntu-latest
     needs: release
     steps:
