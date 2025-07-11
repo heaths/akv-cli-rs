@@ -51,6 +51,7 @@ url = "2.5.4"
 anstream = "0.6.18"
 anstyle = "1.0.10"
 async-trait = "0.1.88"
+azure_storage_blob = "0.2.0"
 criterion = "0.6.0"
 wildcard = "0.3.0"
 

@@ -15,6 +15,9 @@ param location string
 @description('User principal ID')
 param principalId string
 
+@description('Optional client ID of blob data reader')
+param clientId string = ''
+
 @description('The vault name; default is a unique string based on the resource group ID')
 param vaultName string = ''
 
@@ -35,6 +38,7 @@ module resources 'resources.bicep' = {
     environmentName: environmentName
     location: location
     principalId: principalId
+    clientId: clientId
     vaultName: vaultName
   }
 }
@@ -44,3 +48,6 @@ output AZURE_RESOURCE_GROUP string = rg.name
 output AZURE_KEYVAULT_NAME string = resources.outputs.AZURE_KEYVAULT_NAME
 output AZURE_KEYVAULT_URL string = resources.outputs.AZURE_KEYVAULT_URL
 output AZURE_KEYVAULT_DEK_URL string = resources.outputs.AZURE_KEYVAULT_DEK_URL
+output AZURE_STORAGE_ACCOUNT string = resources.outputs.AZURE_STORAGE_ACCOUNT
+output AZURE_STORAGE_KEY string = resources.outputs.AZURE_STORAGE_KEY
+output AZURE_STORAGE_SERVICE_ENDPOINT string = resources.outputs.AZURE_STORAGE_SERVICE_ENDPOINT
