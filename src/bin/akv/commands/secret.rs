@@ -132,7 +132,7 @@ impl Commands {
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name), err)]
     async fn create(&self) -> Result<()> {
         let Commands::Create {
-            secret,
+            secret: (name, value),
             vault,
             content_type,
             tags,
@@ -143,12 +143,12 @@ impl Commands {
 
         let current = Span::current();
         current.record("vault", vault.as_str());
-        current.record("name", &secret.0);
+        current.record("name", name);
 
         let client = SecretClient::new(vault.as_str(), credential()?, None)?;
 
         let params = SetSecretParameters {
-            value: Some(secret.0.to_string()),
+            value: Some(value.to_string()),
             content_type: content_type.clone(),
             tags: Some(HashMap::from_iter(
                 tags.iter()
@@ -158,7 +158,7 @@ impl Commands {
         };
 
         let secret = client
-            .set_secret(&secret.0, params.try_into()?, None)
+            .set_secret(name, params.try_into()?, None)
             .await?
             .into_body()
             .await?;
