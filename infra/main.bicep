@@ -43,6 +43,7 @@ module resources 'resources.bicep' = {
   }
 }
 
+output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_PRINCIPAL_ID string = resources.outputs.AZURE_PRINCIPAL_ID
 output AZURE_RESOURCE_GROUP string = rg.name
 output AZURE_KEYVAULT_NAME string = resources.outputs.AZURE_KEYVAULT_NAME
