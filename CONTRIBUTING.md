@@ -77,6 +77,36 @@ In PowerShell:
 . ./examples/setup.ps1
 ```
 
+## Examples
+
+### Blobs
+
+The `blobs` example is a simple demo application to list and read blobs. You need to create an app registration for RBAC initially, however:
+
+```bash
+az ad sp create-for-rbac -n akv-demo
+```
+
+Note the `appId` and `password` fields. You'll want to pass the `appId` when provisioning resources the first time:
+
+```bash
+AZURE_CLIENT_ID='{appId}' azd up
+```
+
+Once provisioning is complete and because the debug builds of `akv` will automatically read the `azd` environment care of [`dotazure`][dotazure],
+you can create client secret and retain the secret reference for `azd`:
+
+```bash
+cargo run -- secret create client-secret='{password}'
+azd env set AZURE_CLIENT_SECRET '{ID from previous command}'
+```
+
+Now you can run the `blobs` example within the `akv run` command:
+
+```bash
+cargo run -- run -- cargo run --example blobs
+```
+
 ## Troubleshooting
 
 To help troubleshoot issues, you can trace information to the terminal:
@@ -91,6 +121,7 @@ but `debug` for all `akv` traces.
 [Azure CLI]: https://learn.microsoft.com/cli/azure/
 [Azure Developer CLI]: https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd
 [Dev container]: https://code.visualstudio.com/docs/devcontainers/create-dev-container
+[dotazure]: https://github.com/heaths/dotazure-rs
 [GitHub Codespaces]: https://github.com/features/codespaces
 [Rust]: https://www.rust-lang.org
 [RUST_LOG]: https://docs.rs/env_logger/latest/env_logger/#enabling-logging

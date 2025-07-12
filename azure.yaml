@@ -1,3 +1,21 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
 
 name: akv-cli
+hooks:
+  # cspell:ignore bicepparam preprovision postprovision pwsh
+  preprovision:
+    interactive: true
+    shell: pwsh
+    run: |
+      if ($env:AZURE_CLIENT_ID) {
+        $AZURE_CLIENT_OID = $(az ad sp show --id "${env:AZURE_CLIENT_ID}" --query id --output tsv)
+        Write-Host "Mapped client ID '${env:AZURE_CLIENT_ID}' to object ID '$AZURE_CLIENT_OID'"
+        azd env set AZURE_CLIENT_OID "$AZURE_CLIENT_OID"
+      }
+  postprovision:
+    interactive: true
+    shell: pwsh
+    run: |
+      az storage blob upload -c 'examples' -n 'main.bicep' --content-type 'text/plain' -f 'infra/main.bicep' --overwrite
+      az storage blob upload -c 'examples' -n 'main.bicepparam' --content-type 'text/plain' -f 'infra/main.bicepparam' --overwrite
+      az storage blob upload -c 'examples' -n 'resources.bicep' --content-type 'text/plain' -f 'infra/resources.bicep' --overwrite
