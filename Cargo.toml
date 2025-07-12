@@ -52,6 +52,7 @@ anstream = "0.6.18"
 anstyle = "1.0.10"
 async-trait = "0.1.88"
 criterion = "0.6.0"
+wildcard = "0.3.0"
 
 [profile.release]
 opt-level = "s"
