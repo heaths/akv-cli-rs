@@ -19,4 +19,3 @@ hooks:
       az storage blob upload -c 'examples' -n 'main.bicep' --content-type 'text/plain' -f 'infra/main.bicep' --overwrite
       az storage blob upload -c 'examples' -n 'main.bicepparam' --content-type 'text/plain' -f 'infra/main.bicepparam' --overwrite
       az storage blob upload -c 'examples' -n 'resources.bicep' --content-type 'text/plain' -f 'infra/resources.bicep' --overwrite
-      azd env set AZURE_STORAGE_KEY ''

@@ -50,5 +50,5 @@ output AZURE_KEYVAULT_NAME string = resources.outputs.AZURE_KEYVAULT_NAME
 output AZURE_KEYVAULT_URL string = resources.outputs.AZURE_KEYVAULT_URL
 output AZURE_KEYVAULT_DEK_URL string = resources.outputs.AZURE_KEYVAULT_DEK_URL
 output AZURE_STORAGE_ACCOUNT string = resources.outputs.AZURE_STORAGE_ACCOUNT
-output AZURE_STORAGE_KEY string = resources.outputs.AZURE_STORAGE_KEY
+output AZURE_STORAGE_AUTH_MODE string = resources.outputs.AZURE_STORAGE_AUTH_MODE
 output AZURE_STORAGE_SERVICE_ENDPOINT string = resources.outputs.AZURE_STORAGE_SERVICE_ENDPOINT

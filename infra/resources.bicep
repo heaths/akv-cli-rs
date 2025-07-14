@@ -141,6 +141,5 @@ output AZURE_KEYVAULT_NAME string = kv.name
 output AZURE_KEYVAULT_URL string = kv.properties.vaultUri
 output AZURE_KEYVAULT_DEK_URL string = kv::dek.properties.keyUri
 output AZURE_STORAGE_ACCOUNT string = stg.name
-#disable-next-line outputs-should-not-contain-secrets
-output AZURE_STORAGE_KEY string = stg.listKeys().keys[0].value
+output AZURE_STORAGE_AUTH_MODE string = 'login'
 output AZURE_STORAGE_SERVICE_ENDPOINT string = stg.properties.primaryEndpoints.blob
