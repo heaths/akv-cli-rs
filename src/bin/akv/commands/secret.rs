@@ -8,7 +8,6 @@ use akv_cli::{
     Result,
 };
 use azure_core::{date::OffsetDateTime, http::Url};
-use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault_secrets::{
     models::{Secret, SecretProperties, SetSecretParameters, UpdateSecretPropertiesParameters},
     ResourceExt, ResourceId, SecretClient,
@@ -185,7 +184,7 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = SecretClient::new(&vault, DefaultAzureCredential::new()?, None)?;
+        let client = SecretClient::new(&vault, credential()?, None)?;
 
         let tags = HashMap::from_iter(
             tags.iter()
@@ -223,7 +222,7 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = SecretClient::new(&vault, DefaultAzureCredential::new()?, None)?;
+        let client = SecretClient::new(&vault, credential()?, None)?;
         let secret = client
             .get_secret(&name, version.as_deref().unwrap_or_default(), None)
             .await?
@@ -246,7 +245,7 @@ impl Commands {
 
         Span::current().record("vault", vault.as_str());
 
-        let client = SecretClient::new(vault.as_str(), DefaultAzureCredential::new()?, None)?;
+        let client = SecretClient::new(vault.as_str(), credential()?, None)?;
         let mut secrets: Vec<SecretProperties> = client
             .list_secret_properties(None)?
             .try_filter(|p| future::ready(*include_managed || !p.managed.unwrap_or_default()))
@@ -324,7 +323,7 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = SecretClient::new(&vault, DefaultAzureCredential::new()?, None)?;
+        let client = SecretClient::new(&vault, credential()?, None)?;
         let mut secrets: Vec<SecretProperties> = client
             .list_secret_properties_versions(&name, None)?
             .try_collect()
