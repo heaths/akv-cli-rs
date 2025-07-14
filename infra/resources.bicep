@@ -13,6 +13,9 @@ param location string = resourceGroup().location
 @description('User principal ID')
 param principalId string
 
+@description('Optional client ID of blob data reader')
+param clientId string = ''
+
 @description('The vault name; default is a unique string based on the resource group ID')
 param vaultName string = ''
 
@@ -71,8 +74,30 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
+resource stg 'Microsoft.Storage/storageAccounts@2025-01-01' = {
+  name: 't${uniqueString(resourceGroup().id, environmentName)}'
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    isLocalUserEnabled: false
+    publicNetworkAccess: 'Enabled'
+  }
+
+  resource blobs 'blobServices' = {
+    name: 'default'
+    resource container 'containers' = {
+      name: 'examples'
+    }
+  }
+}
+
 var kvSecretsOfficerDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')
 var kvKeysOfficerDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '14b46e9e-c2b7-41b4-b07b-48a6ebf60603')
+var stgBlobDataContributorDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+var stgBlobDataReaderDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')
 
 resource kvSecretsOfficerRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(resourceGroup().id, environmentName, principalId, kvSecretsOfficerDefinitionId)
@@ -85,9 +110,29 @@ resource kvSecretsOfficerRole 'Microsoft.Authorization/roleAssignments@2022-04-0
 
 resource kvKeysOfficerRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(resourceGroup().id, environmentName, principalId, kvKeysOfficerDefinitionId)
+  scope: kv
   properties: {
     roleDefinitionId: kvKeysOfficerDefinitionId
     principalId: principalId
+  }
+}
+
+resource stgBlobDataContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(resourceGroup().id, environmentName, principalId, stgBlobDataContributorDefinitionId)
+  scope: stg
+  properties: {
+    roleDefinitionId: stgBlobDataContributorDefinitionId
+    principalId: principalId
+  }
+}
+
+resource stgBlobDataReaderRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(clientId)) {
+  name: guid(resourceGroup().id, environmentName, clientId, stgBlobDataReaderDefinitionId)
+  scope: stg
+  properties: {
+    roleDefinitionId: stgBlobDataReaderDefinitionId
+    principalId: clientId
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -95,3 +140,6 @@ output AZURE_PRINCIPAL_ID string = principalId
 output AZURE_KEYVAULT_NAME string = kv.name
 output AZURE_KEYVAULT_URL string = kv.properties.vaultUri
 output AZURE_KEYVAULT_DEK_URL string = kv::dek.properties.keyUri
+output AZURE_STORAGE_ACCOUNT string = stg.name
+output AZURE_STORAGE_AUTH_MODE string = 'login'
+output AZURE_STORAGE_SERVICE_ENDPOINT string = stg.properties.primaryEndpoints.blob
