@@ -4,6 +4,7 @@
 mod decrypt;
 mod encrypt;
 mod inject;
+mod key;
 mod read;
 mod run;
 mod secret;
@@ -13,30 +14,35 @@ use azure_security_keyvault_secrets::ResourceId;
 use clap::{CommandFactory, Subcommand};
 use clap_complete::{generate, Shell};
 use std::{borrow::Cow, io};
+use time::OffsetDateTime;
 use url::Url;
 
 const VAULT_ENV_NAME: &str = "AZURE_KEYVAULT_URL";
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Manage secrets in Azure Key Vault.
-    #[command(subcommand)]
-    Secret(secret::Commands),
-
     /// Inject secrets from Azure Key Vault into a templated file or input between {{ }}
     Inject(inject::Args),
 
-    /// Read a secret from Azure Key Vault.
-    Read(read::Args),
-
     /// Pass secrets in environment variables to a process.
     Run(run::Args),
+
+    /// Read a secret from Azure Key Vault.
+    Read(read::Args),
 
     /// Encrypt content to a compact JSON Web Encryption (JWE) token.
     Encrypt(encrypt::Args),
 
     /// Decrypt a compact JSON Web Encryption (JWE) token.
     Decrypt(decrypt::Args),
+
+    /// Manage secrets in Azure Key Vault.
+    #[command(subcommand)]
+    Secret(secret::Commands),
+
+    /// Manage keys in Azure Key Vault.
+    #[command(subcommand)]
+    Key(key::Commands),
 
     /// Generates completion scripts for supported shells.
     Completion {
@@ -50,6 +56,7 @@ impl Commands {
     pub async fn handle(&self) -> Result<()> {
         match self {
             Commands::Secret(command) => command.handle().await,
+            Commands::Key(command) => command.handle().await,
             Commands::Inject(args) => args.inject().await,
             Commands::Read(args) => args.read().await,
             Commands::Run(args) => args.run().await,
@@ -63,6 +70,16 @@ impl Commands {
             }
         }
     }
+}
+
+fn elapsed(
+    formatter: &timeago::Formatter,
+    now: OffsetDateTime,
+    d: Option<time::OffsetDateTime>,
+) -> String {
+    d.map(|time| now - time)
+        .and_then(|time| time.try_into().ok())
+        .map_or_else(String::new, |d| formatter.convert(d))
 }
 
 #[allow(clippy::type_complexity)]
