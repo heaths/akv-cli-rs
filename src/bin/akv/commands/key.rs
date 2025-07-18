@@ -465,14 +465,18 @@ impl ValueParserFactory for KeySize {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum KeyType {
     Ec,
+    EcHsm,
     Rsa,
+    RsaHsm,
 }
 
 impl From<&KeyType> for azure_security_keyvault_keys::models::KeyType {
     fn from(value: &KeyType) -> Self {
         match value {
             KeyType::Ec => Self::EC,
+            KeyType::EcHsm => Self::EcHsm,
             KeyType::Rsa => Self::RSA,
+            KeyType::RsaHsm => Self::RsaHsm,
         }
     }
 }
@@ -503,6 +507,25 @@ fn show(key: &Key) -> Result<()> {
     println!("ID: {}", &resource.source_id);
     println!("Name: {}", &resource.name);
     println!("Version: {}", resource.version.unwrap_or_default());
+    let jwk = key.key.clone().unwrap_or_default();
+    println!(
+        "Type: {}",
+        jwk.kty
+            .as_ref()
+            .map_or_else(String::new, ToString::to_string)
+    );
+    match jwk.kty {
+        Some(JsonKeyType::RSA | JsonKeyType::RsaHsm) => println!(
+            "Size: {}",
+            jwk.n
+                .map_or_else(String::new, |n| (n.len() * 8).to_string())
+        ),
+        Some(JsonKeyType::EC | JsonKeyType::EcHsm) => println!(
+            "Curve: {}",
+            jwk.crv.map_or_else(String::new, |crv| crv.to_string())
+        ),
+        _ => {}
+    };
     println!(
         "Enabled: {}",
         key.attributes
@@ -543,25 +566,6 @@ fn show(key: &Key) -> Result<()> {
             key.attributes.as_ref().and_then(|attr| attr.expires)
         )
     );
-    let jwk = key.key.clone().unwrap_or_default();
-    println!(
-        "Type: {}",
-        jwk.kty
-            .as_ref()
-            .map_or_else(String::new, ToString::to_string)
-    );
-    match jwk.kty {
-        Some(JsonKeyType::RSA | JsonKeyType::RsaHsm) => println!(
-            "Size: {}",
-            jwk.n
-                .map_or_else(String::new, |n| (n.len() * 8).to_string())
-        ),
-        Some(JsonKeyType::EC | JsonKeyType::EcHsm) => println!(
-            "Curve: {}",
-            jwk.crv.map_or_else(String::new, |crv| crv.to_string())
-        ),
-        _ => {}
-    };
     println!("Tags:");
     if let Some(tags) = &key.tags {
         for (k, v) in tags {
