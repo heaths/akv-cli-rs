@@ -92,21 +92,21 @@ pub struct DeveloperCredentialOptions {
 
 impl From<&DeveloperCredentialOptions> for AzureCliCredentialOptions {
     fn from(options: &DeveloperCredentialOptions) -> Self {
-        let mut az_options = AzureCliCredentialOptions::default();
-        az_options.subscription = options.subscription.clone();
-        az_options.tenant_id = options.tenant_id.clone();
-        az_options.additionally_allowed_tenants = options.additionally_allowed_tenants.clone();
-
-        az_options
+        AzureCliCredentialOptions {
+            subscription: options.subscription.clone(),
+            tenant_id: options.tenant_id.clone(),
+            additionally_allowed_tenants: options.additionally_allowed_tenants.clone(),
+            ..Default::default()
+        }
     }
 }
 
 impl From<&DeveloperCredentialOptions> for AzureDeveloperCliCredentialOptions {
     fn from(options: &DeveloperCredentialOptions) -> Self {
-        let mut azd_options = AzureDeveloperCliCredentialOptions::default();
-        azd_options.tenant_id = options.tenant_id.clone();
-
-        azd_options
+        AzureDeveloperCliCredentialOptions {
+            tenant_id: options.tenant_id.clone(),
+            ..Default::default()
+        }
     }
 }
 

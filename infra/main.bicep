@@ -21,6 +21,10 @@ param clientId string = ''
 @description('The vault name; default is a unique string based on the resource group ID')
 param vaultName string = ''
 
+@description('The vault SKU; default is "standard"')
+@allowed(['standard', 'premium'])
+param vaultSku string = 'standard'
+
 var tags = {
   'azd-env-name': environmentName
 }
@@ -40,6 +44,7 @@ module resources 'resources.bicep' = {
     principalId: principalId
     clientId: clientId
     vaultName: vaultName
+    vaultSku: vaultSku
   }
 }
 
@@ -47,6 +52,7 @@ output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_PRINCIPAL_ID string = resources.outputs.AZURE_PRINCIPAL_ID
 output AZURE_RESOURCE_GROUP string = rg.name
 output AZURE_KEYVAULT_NAME string = resources.outputs.AZURE_KEYVAULT_NAME
+output AZURE_KEYVAULT_SKU string = resources.outputs.AZURE_KEYVAULT_SKU
 output AZURE_KEYVAULT_URL string = resources.outputs.AZURE_KEYVAULT_URL
 output AZURE_KEYVAULT_DEK_URL string = resources.outputs.AZURE_KEYVAULT_DEK_URL
 output AZURE_STORAGE_ACCOUNT string = resources.outputs.AZURE_STORAGE_ACCOUNT

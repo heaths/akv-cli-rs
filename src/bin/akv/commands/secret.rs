@@ -7,7 +7,7 @@ use akv_cli::{
     parsing::{parse_key_value, parse_key_value_opt},
     Result,
 };
-use azure_core::{date::OffsetDateTime, http::Url};
+use azure_core::{http::Url, time::OffsetDateTime};
 use azure_security_keyvault_secrets::{
     models::{Secret, SecretProperties, SetSecretParameters, UpdateSecretPropertiesParameters},
     ResourceExt, ResourceId, SecretClient,

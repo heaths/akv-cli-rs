@@ -19,6 +19,10 @@ param clientId string = ''
 @description('The vault name; default is a unique string based on the resource group ID')
 param vaultName string = ''
 
+@description('The vault SKU; default is "standard"')
+@allowed(['standard', 'premium'])
+param vaultSku string = 'standard'
+
 var jwtPayload = '''{
   sub: 'github.com/heaths/akv-cli-rs'
   name: 'Heath Stewart'
@@ -34,7 +38,7 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
   properties: {
     tenantId: subscription().tenantId
     sku: {
-      name: 'standard'
+      name: vaultSku
       family: 'A'
     }
     enableRbacAuthorization: true
@@ -138,6 +142,7 @@ resource stgBlobDataReaderRole 'Microsoft.Authorization/roleAssignments@2022-04-
 
 output AZURE_PRINCIPAL_ID string = principalId
 output AZURE_KEYVAULT_NAME string = kv.name
+output AZURE_KEYVAULT_SKU string = kv.properties.sku.name
 output AZURE_KEYVAULT_URL string = kv.properties.vaultUri
 output AZURE_KEYVAULT_DEK_URL string = kv::dek.properties.keyUri
 output AZURE_STORAGE_ACCOUNT string = stg.name

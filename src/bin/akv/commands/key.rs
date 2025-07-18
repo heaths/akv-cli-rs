@@ -4,7 +4,7 @@
 use super::{elapsed, VAULT_ENV_NAME};
 use crate::credential;
 use akv_cli::{parsing::parse_key_value_opt, Result};
-use azure_core::{date::OffsetDateTime, http::Url};
+use azure_core::{http::Url, time::OffsetDateTime};
 use azure_security_keyvault_keys::{
     models::{
         CreateKeyParameters, Key, KeyProperties, KeyType as JsonKeyType,
