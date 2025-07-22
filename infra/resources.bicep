@@ -19,6 +19,10 @@ param clientId string = ''
 @description('The vault name; default is a unique string based on the resource group ID')
 param vaultName string = ''
 
+@description('The vault SKU; default is "standard"')
+@allowed(['standard', 'premium'])
+param vaultSku string = 'standard'
+
 var jwtPayload = '''{
   sub: 'github.com/heaths/akv-cli-rs'
   name: 'Heath Stewart'
@@ -34,20 +38,22 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
   properties: {
     tenantId: subscription().tenantId
     sku: {
-      name: 'standard'
+      name: vaultSku
       family: 'A'
     }
     enableRbacAuthorization: true
     softDeleteRetentionInDays: 7
   }
 
-  resource secretNumbers 'secrets' = [for i in range(1, 4): {
-    name: 'secret-${i}'
-    properties: {
-      contentType: 'text/plain'
-      value: uniqueString('secret', string(i))
+  resource secretNumbers 'secrets' = [
+    for i in range(1, 4): {
+      name: 'secret-${i}'
+      properties: {
+        contentType: 'text/plain'
+        value: uniqueString('secret', string(i))
+      }
     }
-  }]
+  ]
 
   resource secretJson 'secrets' = {
     name: 'secret-json'
@@ -94,25 +100,24 @@ resource stg 'Microsoft.Storage/storageAccounts@2025-01-01' = {
   }
 }
 
-var kvSecretsOfficerDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')
-var kvKeysOfficerDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '14b46e9e-c2b7-41b4-b07b-48a6ebf60603')
-var stgBlobDataContributorDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
-var stgBlobDataReaderDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')
+var kvAdminDefinitionId = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '00482a5a-887f-4fb3-b363-3b7fe8e74483'
+)
+var stgBlobDataContributorDefinitionId = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+)
+var stgBlobDataReaderDefinitionId = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1'
+)
 
-resource kvSecretsOfficerRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(resourceGroup().id, environmentName, principalId, kvSecretsOfficerDefinitionId)
+resource kvAdminRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(resourceGroup().id, environmentName, principalId, kvAdminDefinitionId)
   scope: kv
   properties: {
-    roleDefinitionId: kvSecretsOfficerDefinitionId
-    principalId: principalId
-  }
-}
-
-resource kvKeysOfficerRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(resourceGroup().id, environmentName, principalId, kvKeysOfficerDefinitionId)
-  scope: kv
-  properties: {
-    roleDefinitionId: kvKeysOfficerDefinitionId
+    roleDefinitionId: kvAdminDefinitionId
     principalId: principalId
   }
 }
@@ -138,6 +143,7 @@ resource stgBlobDataReaderRole 'Microsoft.Authorization/roleAssignments@2022-04-
 
 output AZURE_PRINCIPAL_ID string = principalId
 output AZURE_KEYVAULT_NAME string = kv.name
+output AZURE_KEYVAULT_SKU string = kv.properties.sku.name
 output AZURE_KEYVAULT_URL string = kv.properties.vaultUri
 output AZURE_KEYVAULT_DEK_URL string = kv::dek.properties.keyUri
 output AZURE_STORAGE_ACCOUNT string = stg.name
