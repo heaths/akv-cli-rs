@@ -2,20 +2,25 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use super::{elapsed, VAULT_ENV_NAME};
-use crate::credential;
-use akv_cli::{
-    parsing::{parse_key_value, parse_key_value_opt},
-    Result,
+use crate::{
+    commands::key::{CurveName, KeySize, KeyType},
+    credential,
 };
-use azure_core::{http::Url, time::OffsetDateTime};
-use azure_security_keyvault_secrets::{
-    models::{Secret, SecretProperties, SetSecretParameters, UpdateSecretPropertiesParameters},
-    ResourceExt, ResourceId, SecretClient,
+use akv_cli::{parsing::parse_key_value_opt, Error, ErrorKind, Result};
+use azure_core::{http::Url, time::OffsetDateTime, Bytes};
+use azure_security_keyvault_certificates::{
+    models::{
+        Certificate, CertificatePolicy, CertificateProperties, CreateCertificateParameters,
+        IssuerParameters, KeyProperties, UpdateCertificatePropertiesParameters,
+        X509CertificateProperties,
+    },
+    CertificateClient, CertificateClientExt as _, ResourceExt as _, ResourceId,
 };
 use clap::Subcommand;
-use futures::{future, TryStreamExt as _};
+use futures::TryStreamExt as _;
+use indicatif::ProgressBar;
 use prettytable::{color, format, Attr, Cell, Row, Table};
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 use timeago::Formatter;
 use tracing::{Level, Span};
 
@@ -23,33 +28,53 @@ use tracing::{Level, Span};
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {
-    /// Create secrets in an Azure Key Vault.
+    /// Create certificates in an Azure Key Vault.
     Create {
-        /// A secret formatted as "name=value".
-        #[arg(value_name = "NAME=VALUE", value_parser = parse_key_value::<String>)]
-        secret: (String, String),
+        /// Name of the certificate.
+        #[arg(long)]
+        name: String,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
         #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Url,
 
-        /// The content type of the secret.
-        #[arg(long, default_value = "text/plain")]
-        content_type: Option<String>,
+        /// The certificate issuer name.
+        #[arg(long, default_value = "Self")]
+        issuer: String,
 
-        /// Tags to set on the secret formatted as "name[=value]".
+        /// The subject name.
+        #[arg(long, default_value = "CN=DefaultPolicy")]
+        subject: String,
+
+        /// How many months the certificate is valid.
+        #[arg(long, default_value_t = 3)]
+        validity: u32,
+
+        /// The key type.
+        #[arg(id = "type", long, value_enum)]
+        r#type: KeyType,
+
+        /// The key size in bits for RSA keys.
+        #[arg(long, value_parser, required_if_eq("type", "rsa"))]
+        size: Option<KeySize>,
+
+        /// The elliptic curve name for EC keys.
+        #[arg(long, value_enum, required_if_eq("type", "ec"))]
+        curve: Option<CurveName>,
+
+        /// Tags to set on the certificate formatted as "name[=value]".
         /// Repeat argument once for each tag.
         #[arg(long, value_name = "NAME[=VALUE]", value_parser = parse_key_value_opt::<String>)]
         tags: Vec<(String, Option<String>)>,
     },
 
-    /// Edits a secret in an Azure Key Vault.
+    /// Edits a certificate in an Azure Key Vault.
     Edit {
-        /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
+        /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificate/my-certificate".
         #[arg(group = "ident", value_name = "URL")]
         id: Option<Url>,
 
-        /// The secret name.
+        /// The certificate name.
         #[arg(long, group = "ident", requires = "vault")]
         name: Option<String>,
 
@@ -57,23 +82,19 @@ pub enum Commands {
         #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Option<Url>,
 
-        /// The content type of the secret.
-        #[arg(long)]
-        content_type: Option<String>,
-
-        /// Tags to set on the secret formatted as "name[=value]".
+        /// Tags to set on the certificate formatted as "name[=value]".
         /// Repeat argument once for each tag.
         #[arg(long, value_name = "NAME[=VALUE]", value_parser = parse_key_value_opt::<String>)]
         tags: Vec<(String, Option<String>)>,
     },
 
-    /// Gets information about a secret in an Azure Key Vault.
+    /// Gets information about a certificate in an Azure Key Vault.
     Get {
-        /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
+        /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificates/my-certificate".
         #[arg(group = "ident", value_name = "URL")]
         id: Option<Url>,
 
-        /// The secret name.
+        /// The certificate name.
         #[arg(long, group = "ident", requires = "vault")]
         name: Option<String>,
 
@@ -82,28 +103,24 @@ pub enum Commands {
         vault: Option<Url>,
     },
 
-    /// List secrets in an Azure Key Vault.
+    /// List certificate in an Azure Key Vault.
     List {
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
         #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Url,
 
-        /// Show more details about each secret.
+        /// Show more details about each certificate.
         #[arg(long)]
         long: bool,
-
-        /// Include managed secrets.
-        #[arg(long)]
-        include_managed: bool,
     },
 
-    /// List versions of a secret in an Azure Key Vault.
+    /// List versions of a certificate in an Azure Key Vault.
     ListVersions {
-        /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
+        /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificates/my-certificate".
         #[arg(group = "ident", value_name = "URL")]
         id: Option<Url>,
 
-        /// The secret name.
+        /// The certificate name.
         #[arg(long, group = "ident", requires = "vault")]
         name: Option<String>,
 
@@ -131,9 +148,14 @@ impl Commands {
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name), err)]
     async fn create(&self) -> Result<()> {
         let Commands::Create {
-            secret: (name, value),
+            name,
             vault,
-            content_type,
+            issuer,
+            subject,
+            validity,
+            r#type,
+            size,
+            curve,
             tags,
         } = self
         else {
@@ -144,11 +166,26 @@ impl Commands {
         current.record("vault", vault.as_str());
         current.record("name", name);
 
-        let client = SecretClient::new(vault.as_str(), credential()?, None)?;
-
-        let params = SetSecretParameters {
-            value: Some(value.to_string()),
-            content_type: content_type.clone(),
+        let client = CertificateClient::new(vault.as_str(), credential()?, None)?;
+        let params = CreateCertificateParameters {
+            certificate_policy: Some(CertificatePolicy {
+                key_properties: Some(KeyProperties {
+                    key_type: Some(r#type.into()),
+                    key_size: size.map(|value| *value),
+                    curve: curve.map(Into::into),
+                    ..Default::default()
+                }),
+                issuer_parameters: Some(IssuerParameters {
+                    name: Some(issuer.clone()),
+                    ..Default::default()
+                }),
+                x509_certificate_properties: Some(X509CertificateProperties {
+                    subject: Some(subject.clone()),
+                    validity_in_months: Some(*validity as i32),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
             tags: Some(HashMap::from_iter(
                 tags.iter()
                     .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
@@ -156,13 +193,39 @@ impl Commands {
             ..Default::default()
         };
 
-        let secret = client
-            .set_secret(name, params.try_into()?, None)
+        let spinner = ProgressBar::new_spinner().with_message("Creating certificate...");
+        spinner.enable_steady_tick(Duration::from_millis(100));
+        let status = client
+            .begin_create_certificate(name, params.try_into()?, None)?
+            .wait()
+            .await?
+            .into_body()
+            .await?;
+        spinner.finish_and_clear();
+
+        if !matches!(status.status, Some(status) if status == "completed") {
+            return Err(Error::new(
+                ErrorKind::Other,
+                format!(
+                    "Certificate creation failed: {}",
+                    status.status_details.unwrap_or_default()
+                ),
+            ));
+        }
+        let Some(target) = status.target else {
+            return Err(Error::new(
+                ErrorKind::Other,
+                "Certificate target not available",
+            ));
+        };
+        let ResourceId { name, version, .. } = target.parse()?;
+        let certificate = client
+            .get_certificate(&name, &version.unwrap_or_default(), None)
             .await?
             .into_body()
             .await?;
 
-        show(&secret)
+        show(&certificate)
     }
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
@@ -171,7 +234,6 @@ impl Commands {
             id,
             vault,
             name,
-            content_type,
             tags,
         } = self
         else {
@@ -184,20 +246,19 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = SecretClient::new(&vault, credential()?, None)?;
+        let client = CertificateClient::new(&vault, credential()?, None)?;
 
         let tags = HashMap::from_iter(
             tags.iter()
                 .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
         );
-        let params = UpdateSecretPropertiesParameters {
-            content_type: content_type.clone(),
+        let params = UpdateCertificatePropertiesParameters {
             tags: Some(tags),
             ..Default::default()
         };
 
-        let secret = client
-            .update_secret_properties(
+        let certificate = client
+            .update_certificate_properties(
                 &name,
                 version.as_deref().unwrap_or_default(),
                 params.try_into()?,
@@ -207,7 +268,7 @@ impl Commands {
             .into_body()
             .await?;
 
-        show(&secret)
+        show(&certificate)
     }
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
@@ -222,36 +283,30 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = SecretClient::new(&vault, credential()?, None)?;
-        let secret = client
-            .get_secret(&name, version.as_deref().unwrap_or_default(), None)
+        let client = CertificateClient::new(&vault, credential()?, None)?;
+        let certificate = client
+            .get_certificate(&name, version.as_deref().unwrap_or_default(), None)
             .await?
             .into_body()
             .await?;
 
-        show(&secret)
+        show(&certificate)
     }
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault), err)]
     async fn list(&self) -> Result<()> {
-        let Commands::List {
-            vault,
-            long,
-            include_managed,
-        } = self
-        else {
+        let Commands::List { vault, long } = self else {
             panic!("invalid command");
         };
 
         Span::current().record("vault", vault.as_str());
 
-        let client = SecretClient::new(vault.as_str(), credential()?, None)?;
-        let mut secrets: Vec<SecretProperties> = client
-            .list_secret_properties(None)?
-            .try_filter(|p| future::ready(*include_managed || !p.managed.unwrap_or_default()))
+        let client = CertificateClient::new(vault.as_str(), credential()?, None)?;
+        let mut certificates: Vec<CertificateProperties> = client
+            .list_certificate_properties(None)?
             .try_collect()
             .await?;
-        secrets.sort_by(|a, b| a.id.cmp(&b.id));
+        certificates.sort_by(|a, b| a.id.cmp(&b.id));
 
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
@@ -259,7 +314,6 @@ impl Commands {
         let mut titles = Row::new(vec![
             Cell::new("NAME").with_style(Attr::Dim),
             Cell::new("ID").with_style(Attr::Dim),
-            Cell::new("TYPE").with_style(Attr::Dim),
         ]);
         if *long {
             titles.add_cell(Cell::new("CREATED").with_style(Attr::Dim));
@@ -271,28 +325,32 @@ impl Commands {
         let formatter = Formatter::new();
         let name_attr = Attr::ForegroundColor(color::GREEN);
 
-        for secret in &secrets {
-            let resource: ResourceId = secret.resource_id()?;
+        for certificate in &certificates {
+            let resource: ResourceId = certificate.resource_id()?;
             let source_id = resource.source_id;
-            let r#type = secret.content_type.as_deref().unwrap_or_default();
 
             let mut row = Row::new(vec![
                 Cell::new(resource.name.as_str()).with_style(name_attr),
                 Cell::new(source_id.as_str()),
-                Cell::new(r#type),
             ]);
             if *long {
                 let created = elapsed(
                     &formatter,
                     now,
-                    secret.attributes.as_ref().and_then(|attr| attr.created),
+                    certificate
+                        .attributes
+                        .as_ref()
+                        .and_then(|attr| attr.created),
                 );
                 row.add_cell(Cell::new(created.as_str()));
             }
             let edited = elapsed(
                 &formatter,
                 now,
-                secret.attributes.as_ref().and_then(|attr| attr.updated),
+                certificate
+                    .attributes
+                    .as_ref()
+                    .and_then(|attr| attr.updated),
             );
             row.add_cell(Cell::new(edited.as_str()));
 
@@ -323,12 +381,12 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = SecretClient::new(&vault, credential()?, None)?;
-        let mut secrets: Vec<SecretProperties> = client
-            .list_secret_properties_versions(&name, None)?
+        let client = CertificateClient::new(&vault, credential()?, None)?;
+        let mut certificates: Vec<CertificateProperties> = client
+            .list_certificate_properties_versions(&name, None)?
             .try_collect()
             .await?;
-        secrets.sort_by(|a, b| {
+        certificates.sort_by(|a, b| {
             let a = a.attributes.as_ref().and_then(|x| x.updated);
             let b = b.attributes.as_ref().and_then(|x| x.updated);
             a.cmp(&b).reverse()
@@ -337,10 +395,7 @@ impl Commands {
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
 
-        let mut titles = Row::new(vec![
-            Cell::new("ID").with_style(Attr::Dim),
-            Cell::new("TYPE").with_style(Attr::Dim),
-        ]);
+        let mut titles = Row::new(vec![Cell::new("ID").with_style(Attr::Dim)]);
         if *long {
             titles.add_cell(Cell::new("CREATED").with_style(Attr::Dim));
         }
@@ -351,27 +406,29 @@ impl Commands {
         let formatter = Formatter::new();
         let id_attr = Attr::ForegroundColor(color::GREEN);
 
-        for secret in &secrets {
-            let resource: ResourceId = secret.resource_id()?;
+        for certificate in &certificates {
+            let resource: ResourceId = certificate.resource_id()?;
             let source_id = resource.source_id;
-            let r#type = secret.content_type.as_deref().unwrap_or_default();
 
-            let mut row = Row::new(vec![
-                Cell::new(source_id.as_str()).with_style(id_attr),
-                Cell::new(r#type),
-            ]);
+            let mut row = Row::new(vec![Cell::new(source_id.as_str()).with_style(id_attr)]);
             if *long {
                 let created = elapsed(
                     &formatter,
                     now,
-                    secret.attributes.as_ref().and_then(|attr| attr.created),
+                    certificate
+                        .attributes
+                        .as_ref()
+                        .and_then(|attr| attr.created),
                 );
                 row.add_cell(Cell::new(created.as_str()));
             }
             let edited = elapsed(
                 &formatter,
                 now,
-                secret.attributes.as_ref().and_then(|attr| attr.updated),
+                certificate
+                    .attributes
+                    .as_ref()
+                    .and_then(|attr| attr.updated),
             );
             row.add_cell(Cell::new(edited.as_str()));
 
@@ -385,8 +442,8 @@ impl Commands {
     }
 }
 
-fn show(secret: &Secret) -> Result<()> {
-    let resource = secret.resource_id()?;
+fn show(certificate: &Certificate) -> Result<()> {
+    let resource = certificate.resource_id()?;
 
     let now = OffsetDateTime::now_utc();
     let formatter = Formatter::new();
@@ -395,27 +452,30 @@ fn show(secret: &Secret) -> Result<()> {
     println!("Name: {}", &resource.name);
     println!("Version: {}", resource.version.unwrap_or_default());
     println!(
-        "Type: {}",
-        secret
-            .content_type
+        "Thumbprint: {}",
+        certificate
+            .x509_thumbprint
             .as_ref()
-            .map_or_else(String::new, |s| s.into()),
+            .map(|v| format!("{:X}", Bytes::copy_from_slice(v)))
+            .unwrap_or_default()
     );
     println!(
         "Enabled: {}",
-        secret
+        certificate
             .attributes
             .as_ref()
             .and_then(|attr| attr.enabled)
             .unwrap_or_default()
     );
-    println!("Managed: {}", secret.managed.unwrap_or_default());
     println!(
         "Created: {}",
         elapsed(
             &formatter,
             now,
-            secret.attributes.as_ref().and_then(|attr| attr.created)
+            certificate
+                .attributes
+                .as_ref()
+                .and_then(|attr| attr.created)
         )
     );
     println!(
@@ -423,7 +483,10 @@ fn show(secret: &Secret) -> Result<()> {
         elapsed(
             &formatter,
             now,
-            secret.attributes.as_ref().and_then(|attr| attr.updated)
+            certificate
+                .attributes
+                .as_ref()
+                .and_then(|attr| attr.updated)
         )
     );
     println!(
@@ -431,7 +494,10 @@ fn show(secret: &Secret) -> Result<()> {
         elapsed(
             &formatter,
             now,
-            secret.attributes.as_ref().and_then(|attr| attr.not_before)
+            certificate
+                .attributes
+                .as_ref()
+                .and_then(|attr| attr.not_before)
         )
     );
     println!(
@@ -439,15 +505,39 @@ fn show(secret: &Secret) -> Result<()> {
         elapsed(
             &formatter,
             now,
-            secret.attributes.as_ref().and_then(|attr| attr.expires)
+            certificate
+                .attributes
+                .as_ref()
+                .and_then(|attr| attr.expires)
         )
     );
     println!("Tags:");
-    if let Some(tags) = &secret.tags {
+    if let Some(tags) = &certificate.tags {
         for (k, v) in tags {
             println!("  {k}: {v}");
         }
     }
 
     Ok(())
+}
+
+impl From<&KeyType> for azure_security_keyvault_certificates::models::KeyType {
+    fn from(value: &KeyType) -> Self {
+        match value {
+            KeyType::Ec => Self::EC,
+            KeyType::EcHsm => Self::EcHsm,
+            KeyType::Rsa => Self::RSA,
+            KeyType::RsaHsm => Self::RsaHsm,
+        }
+    }
+}
+
+impl From<CurveName> for azure_security_keyvault_certificates::models::CurveName {
+    fn from(value: CurveName) -> Self {
+        match value {
+            CurveName::P256 => Self::P256,
+            CurveName::P384 => Self::P384,
+            CurveName::P521 => Self::P521,
+        }
+    }
 }

@@ -36,7 +36,7 @@ pub enum Commands {
         #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Url,
 
-        /// The content type of the key.
+        /// The key type.
         #[arg(id = "type", long, value_enum)]
         r#type: KeyType,
 

@@ -1,6 +1,7 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+mod certificate;
 mod decrypt;
 mod encrypt;
 mod inject;
@@ -44,6 +45,10 @@ pub enum Commands {
     #[command(subcommand)]
     Key(key::Commands),
 
+    /// Manage certificates in Azure Key Vault.
+    #[command(subcommand)]
+    Certificate(certificate::Commands),
+
     /// Generates completion scripts for supported shells.
     Completion {
         /// The shell script to generate.
@@ -57,6 +62,7 @@ impl Commands {
         match self {
             Commands::Secret(command) => command.handle().await,
             Commands::Key(command) => command.handle().await,
+            Commands::Certificate(command) => command.handle().await,
             Commands::Inject(args) => args.inject().await,
             Commands::Read(args) => args.read().await,
             Commands::Run(args) => args.run().await,
