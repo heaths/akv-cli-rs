@@ -14,7 +14,7 @@ use akv_cli::{ErrorKind, Result};
 use azure_security_keyvault_secrets::ResourceId;
 use clap::{CommandFactory, Subcommand};
 use clap_complete::{generate, Shell};
-use std::{borrow::Cow, io};
+use std::{borrow::Cow, collections::HashMap, io};
 use time::OffsetDateTime;
 use url::Url;
 
@@ -78,6 +78,21 @@ impl Commands {
     }
 }
 
+trait IsDefault {
+    fn is_default(&self) -> bool;
+
+    fn default_or(self) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if self.is_default() {
+            return None;
+        }
+
+        Some(self)
+    }
+}
+
 fn elapsed(
     formatter: &timeago::Formatter,
     now: OffsetDateTime,
@@ -86,6 +101,28 @@ fn elapsed(
     d.map(|time| now - time)
         .and_then(|time| time.try_into().ok())
         .map_or_else(String::new, |d| formatter.convert(d))
+}
+
+fn map_tags(tags: &[(String, Option<String>)]) -> Option<HashMap<String, String>> {
+    if tags.is_empty() {
+        None
+    } else {
+        Some(HashMap::from_iter(tags.iter().map(|(k, v)| {
+            (k.to_string(), v.clone().unwrap_or_default())
+        })))
+    }
+}
+
+fn map_vec<'a, T, U, F>(v: Option<&'a [T]>, f: F) -> Option<Vec<U>>
+where
+    U: From<&'a T>,
+    F: FnMut(&'a T) -> U,
+{
+    match v {
+        Some([]) => None,
+        Some(v) => Some(v.iter().map(f).collect()),
+        None => None,
+    }
 }
 
 #[allow(clippy::type_complexity)]
