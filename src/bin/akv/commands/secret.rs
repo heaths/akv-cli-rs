@@ -2,14 +2,20 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use super::{elapsed, VAULT_ENV_NAME};
-use crate::{commands::map_tags, credential};
+use crate::{
+    commands::{map_tags, AttributeArgs, IsDefault},
+    credential,
+};
 use akv_cli::{
     parsing::{parse_key_value, parse_key_value_opt},
     Result,
 };
 use azure_core::{http::Url, time::OffsetDateTime};
 use azure_security_keyvault_secrets::{
-    models::{Secret, SecretProperties, SetSecretParameters, UpdateSecretPropertiesParameters},
+    models::{
+        Secret, SecretAttributes, SecretProperties, SetSecretParameters,
+        UpdateSecretPropertiesParameters,
+    },
     ResourceExt, ResourceId, SecretClient,
 };
 use clap::Subcommand;
@@ -36,6 +42,9 @@ pub enum Commands {
         #[arg(long, default_value = "text/plain")]
         content_type: Option<String>,
 
+        #[command(flatten)]
+        attributes: AttributeArgs,
+
         /// Tags to set on the secret formatted as "name[=value]".
         /// Repeat argument once for each tag.
         #[arg(long, value_name = "NAME[=VALUE]", value_parser = parse_key_value_opt::<String>)]
@@ -59,6 +68,9 @@ pub enum Commands {
         /// The content type of the secret.
         #[arg(long)]
         content_type: Option<String>,
+
+        #[command(flatten)]
+        attributes: AttributeArgs,
 
         /// Tags to set on the secret formatted as "name[=value]".
         /// Repeat argument once for each tag.
@@ -133,6 +145,12 @@ impl Commands {
             secret: (name, value),
             vault,
             content_type,
+            attributes:
+                AttributeArgs {
+                    enabled,
+                    expires,
+                    not_before,
+                },
             tags,
         } = self
         else {
@@ -145,11 +163,17 @@ impl Commands {
 
         let client = SecretClient::new(vault.as_str(), credential()?, None)?;
 
+        let secret_attributes = SecretAttributes {
+            enabled: *enabled,
+            expires: *expires,
+            not_before: *not_before,
+            ..Default::default()
+        };
         let params = SetSecretParameters {
             value: Some(value.to_string()),
             content_type: content_type.clone(),
             tags: map_tags(tags),
-            ..Default::default()
+            secret_attributes: secret_attributes.default_or(),
         };
 
         let secret = client
@@ -168,6 +192,12 @@ impl Commands {
             vault,
             name,
             content_type,
+            attributes:
+                AttributeArgs {
+                    enabled,
+                    expires,
+                    not_before,
+                },
             tags,
         } = self
         else {
@@ -182,10 +212,16 @@ impl Commands {
 
         let client = SecretClient::new(&vault, credential()?, None)?;
 
+        let secret_attributes = SecretAttributes {
+            enabled: *enabled,
+            expires: *expires,
+            not_before: *not_before,
+            ..Default::default()
+        };
         let params = UpdateSecretPropertiesParameters {
             content_type: content_type.clone(),
             tags: map_tags(tags),
-            ..Default::default()
+            secret_attributes: secret_attributes.default_or(),
         };
 
         let secret = client
@@ -442,4 +478,10 @@ fn show(secret: &Secret) -> Result<()> {
     }
 
     Ok(())
+}
+
+impl IsDefault for SecretAttributes {
+    fn is_default(&self) -> bool {
+        self.enabled.is_none() && self.expires.is_none() && self.not_before.is_none()
+    }
 }

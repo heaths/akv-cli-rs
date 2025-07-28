@@ -3,14 +3,14 @@
 
 use super::{elapsed, VAULT_ENV_NAME};
 use crate::{
-    commands::{map_tags, map_vec},
+    commands::{map_tags, map_vec, AttributeArgs, IsDefault},
     credential,
 };
 use akv_cli::{parsing::parse_key_value_opt, Result};
 use azure_core::{http::Url, time::OffsetDateTime};
 use azure_security_keyvault_keys::{
     models::{
-        CreateKeyParameters, Key, KeyProperties, KeyType as JsonKeyType,
+        CreateKeyParameters, Key, KeyAttributes, KeyProperties, KeyType as JsonKeyType,
         UpdateKeyPropertiesParameters,
     },
     KeyClient, ResourceExt as _, ResourceId,
@@ -55,6 +55,9 @@ pub enum Commands {
         #[arg(long, value_enum, value_delimiter = ',')]
         operations: Vec<KeyOperation>,
 
+        #[command(flatten)]
+        attributes: AttributeArgs,
+
         /// Tags to set on the key formatted as "name[=value]".
         /// Repeat argument once for each tag.
         #[arg(long, value_name = "NAME[=VALUE]", value_parser = parse_key_value_opt::<String>)]
@@ -78,6 +81,9 @@ pub enum Commands {
         /// The operations permitted for this key.
         #[arg(long, value_enum, value_delimiter = ',')]
         operations: Vec<KeyOperation>,
+
+        #[command(flatten)]
+        attributes: AttributeArgs,
 
         /// Tags to set on the key formatted as "name[=value]".
         /// Repeat argument once for each tag.
@@ -155,6 +161,12 @@ impl Commands {
             size,
             curve,
             operations,
+            attributes:
+                AttributeArgs {
+                    enabled,
+                    expires,
+                    not_before,
+                },
             tags,
         } = self
         else {
@@ -167,12 +179,19 @@ impl Commands {
 
         let client = KeyClient::new(vault.as_str(), credential()?, None)?;
 
+        let key_attributes = KeyAttributes {
+            enabled: *enabled,
+            expires: *expires,
+            not_before: *not_before,
+            ..Default::default()
+        };
         let params = CreateKeyParameters {
             kty: Some(r#type.into()),
             key_size: size.map(|value| *value),
             curve: curve.map(Into::into),
             key_ops: map_vec(Some(operations), Into::into),
             tags: map_tags(tags),
+            key_attributes: key_attributes.default_or(),
             ..Default::default()
         };
 
@@ -192,6 +211,12 @@ impl Commands {
             vault,
             name,
             operations,
+            attributes:
+                AttributeArgs {
+                    enabled,
+                    expires,
+                    not_before,
+                },
             tags,
         } = self
         else {
@@ -206,9 +231,16 @@ impl Commands {
 
         let client = KeyClient::new(&vault, credential()?, None)?;
 
+        let key_attributes = KeyAttributes {
+            enabled: *enabled,
+            expires: *expires,
+            not_before: *not_before,
+            ..Default::default()
+        };
         let params = UpdateKeyPropertiesParameters {
             key_ops: map_vec(Some(operations), Into::into),
             tags: map_tags(tags),
+            key_attributes: key_attributes.default_or(),
             ..Default::default()
         };
 
@@ -581,6 +613,12 @@ impl From<azure_security_keyvault_keys::models::KeyOperation> for KeyOperation {
             }
             _ => Self::UnknownValue("(unknown)".into()),
         }
+    }
+}
+
+impl IsDefault for KeyAttributes {
+    fn is_default(&self) -> bool {
+        self.enabled.is_none() && self.expires.is_none() && self.not_before.is_none()
     }
 }
 

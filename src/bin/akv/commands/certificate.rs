@@ -5,7 +5,7 @@ use super::{elapsed, VAULT_ENV_NAME};
 use crate::{
     commands::{
         key::{CurveName, KeySize, KeyType},
-        map_tags, map_vec, IsDefault,
+        map_tags, map_vec, AttributeArgs, IsDefault,
     },
     credential,
 };
@@ -13,9 +13,9 @@ use akv_cli::{parsing::parse_key_value_opt, Error, ErrorKind, Result};
 use azure_core::{http::Url, time::OffsetDateTime, Bytes};
 use azure_security_keyvault_certificates::{
     models::{
-        Certificate, CertificatePolicy, CertificateProperties, CreateCertificateParameters,
-        IssuerParameters, KeyProperties, UpdateCertificatePropertiesParameters,
-        X509CertificateProperties,
+        Certificate, CertificateAttributes, CertificatePolicy, CertificateProperties,
+        CreateCertificateParameters, IssuerParameters, KeyProperties,
+        UpdateCertificatePropertiesParameters, X509CertificateProperties,
     },
     CertificateClient, CertificateClientExt as _, ResourceExt as _, ResourceId,
 };
@@ -81,6 +81,9 @@ pub enum Commands {
         #[arg(long, value_delimiter = ',')]
         enhanced_key_usage: Vec<String>,
 
+        #[command(flatten)]
+        attributes: AttributeArgs,
+
         /// Tags to set on the certificate formatted as "name[=value]".
         /// Repeat argument once for each tag.
         #[arg(long, value_name = "NAME[=VALUE]", value_parser = parse_key_value_opt::<String>)]
@@ -140,6 +143,9 @@ pub enum Commands {
         /// Enhanced key usage OIDs.
         #[arg(long, value_delimiter = ',')]
         enhanced_key_usage: Option<Vec<String>>,
+
+        #[command(flatten)]
+        attributes: AttributeArgs,
 
         /// Tags to set on the certificate formatted as "name[=value]".
         /// Repeat argument once for each tag.
@@ -219,6 +225,12 @@ impl Commands {
             reuse_key,
             key_usage,
             enhanced_key_usage,
+            attributes:
+                AttributeArgs {
+                    enabled,
+                    expires,
+                    not_before,
+                },
             tags,
         } = self
         else {
@@ -231,6 +243,12 @@ impl Commands {
 
         let client = CertificateClient::new(vault.as_str(), credential()?, None)?;
 
+        let certificate_attributes = CertificateAttributes {
+            enabled: *enabled,
+            expires: *expires,
+            not_before: *not_before,
+            ..Default::default()
+        };
         let params = CreateCertificateParameters {
             certificate_policy: Some(CertificatePolicy {
                 key_properties: Some(KeyProperties {
@@ -254,6 +272,7 @@ impl Commands {
                 ..Default::default()
             }),
             tags: map_tags(tags),
+            certificate_attributes: certificate_attributes.default_or(),
             ..Default::default()
         };
 
@@ -308,6 +327,12 @@ impl Commands {
             reuse_key,
             key_usage,
             enhanced_key_usage,
+            attributes:
+                AttributeArgs {
+                    enabled,
+                    expires,
+                    not_before,
+                },
             tags,
         } = self
         else {
@@ -322,6 +347,12 @@ impl Commands {
 
         let client = CertificateClient::new(&vault, credential()?, None)?;
 
+        let certificate_attributes = CertificateAttributes {
+            enabled: *enabled,
+            expires: *expires,
+            not_before: *not_before,
+            ..Default::default()
+        };
         let key_properties = KeyProperties {
             key_type: r#type.map(Into::into),
             key_size: size.map(|value| *value),
@@ -346,11 +377,10 @@ impl Commands {
             x509_certificate_properties: x509_certificate_properties.default_or(),
             ..Default::default()
         };
-
         let params = UpdateCertificatePropertiesParameters {
             certificate_policy: policy.default_or(),
             tags: map_tags(tags),
-            ..Default::default()
+            certificate_attributes: certificate_attributes.default_or(),
         };
 
         let certificate = client
@@ -792,5 +822,11 @@ impl IsDefault for CertificatePolicy {
             && self.lifetime_actions.is_none()
             && self.secret_properties.is_none()
             && self.x509_certificate_properties.is_none()
+    }
+}
+
+impl IsDefault for CertificateAttributes {
+    fn is_default(&self) -> bool {
+        self.enabled.is_none() && self.expires.is_none() && self.not_before.is_none()
     }
 }

@@ -1,9 +1,15 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use crate::{Error, ErrorKind, Result};
+use crate::{Error, ErrorKind, Result, ResultExt};
 use futures::future::BoxFuture;
 use std::{borrow::Cow, io, str::FromStr};
+use time::{format_description::well_known, OffsetDateTime};
+
+pub fn parse_date_time_opt(value: &str) -> Result<OffsetDateTime> {
+    OffsetDateTime::parse(value, &well_known::Rfc3339)
+        .with_context(ErrorKind::InvalidData, "failed to parse date-time")
+}
 
 pub fn parse_key_value<T>(value: &str) -> Result<(String, T)>
 where
