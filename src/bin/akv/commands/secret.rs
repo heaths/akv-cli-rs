@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use super::{elapsed, VAULT_ENV_NAME};
-use crate::credential;
+use crate::{commands::map_tags, credential};
 use akv_cli::{
     parsing::{parse_key_value, parse_key_value_opt},
     Result,
@@ -15,7 +15,6 @@ use azure_security_keyvault_secrets::{
 use clap::Subcommand;
 use futures::{future, TryStreamExt as _};
 use prettytable::{color, format, Attr, Cell, Row, Table};
-use std::collections::HashMap;
 use timeago::Formatter;
 use tracing::{Level, Span};
 
@@ -149,10 +148,7 @@ impl Commands {
         let params = SetSecretParameters {
             value: Some(value.to_string()),
             content_type: content_type.clone(),
-            tags: Some(HashMap::from_iter(
-                tags.iter()
-                    .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
-            )),
+            tags: map_tags(tags),
             ..Default::default()
         };
 
@@ -186,13 +182,9 @@ impl Commands {
 
         let client = SecretClient::new(&vault, credential()?, None)?;
 
-        let tags = HashMap::from_iter(
-            tags.iter()
-                .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
-        );
         let params = UpdateSecretPropertiesParameters {
             content_type: content_type.clone(),
-            tags: Some(tags),
+            tags: map_tags(tags),
             ..Default::default()
         };
 

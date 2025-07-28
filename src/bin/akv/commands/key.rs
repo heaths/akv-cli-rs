@@ -2,7 +2,10 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use super::{elapsed, VAULT_ENV_NAME};
-use crate::credential;
+use crate::{
+    commands::{map_tags, map_vec},
+    credential,
+};
 use akv_cli::{parsing::parse_key_value_opt, Result};
 use azure_core::{http::Url, time::OffsetDateTime};
 use azure_security_keyvault_keys::{
@@ -18,7 +21,7 @@ use clap::{
 };
 use futures::{future, TryStreamExt as _};
 use prettytable::{color, format, Attr, Cell, Row, Table};
-use std::{collections::HashMap, ops::Deref, str::FromStr};
+use std::{fmt, ops::Deref, str::FromStr};
 use timeago::Formatter;
 use tracing::{Level, Span};
 
@@ -48,6 +51,10 @@ pub enum Commands {
         #[arg(long, value_enum, required_if_eq("type", "ec"))]
         curve: Option<CurveName>,
 
+        /// The operations permitted for this key.
+        #[arg(long, value_enum, value_delimiter = ',')]
+        operations: Vec<KeyOperation>,
+
         /// Tags to set on the key formatted as "name[=value]".
         /// Repeat argument once for each tag.
         #[arg(long, value_name = "NAME[=VALUE]", value_parser = parse_key_value_opt::<String>)]
@@ -67,6 +74,10 @@ pub enum Commands {
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
         #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Option<Url>,
+
+        /// The operations permitted for this key.
+        #[arg(long, value_enum, value_delimiter = ',')]
+        operations: Vec<KeyOperation>,
 
         /// Tags to set on the key formatted as "name[=value]".
         /// Repeat argument once for each tag.
@@ -143,6 +154,7 @@ impl Commands {
             r#type,
             size,
             curve,
+            operations,
             tags,
         } = self
         else {
@@ -159,10 +171,8 @@ impl Commands {
             kty: Some(r#type.into()),
             key_size: size.map(|value| *value),
             curve: curve.map(Into::into),
-            tags: Some(HashMap::from_iter(
-                tags.iter()
-                    .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
-            )),
+            key_ops: map_vec(Some(operations), Into::into),
+            tags: map_tags(tags),
             ..Default::default()
         };
 
@@ -181,6 +191,7 @@ impl Commands {
             id,
             vault,
             name,
+            operations,
             tags,
         } = self
         else {
@@ -195,12 +206,9 @@ impl Commands {
 
         let client = KeyClient::new(&vault, credential()?, None)?;
 
-        let tags = HashMap::from_iter(
-            tags.iter()
-                .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
-        );
         let params = UpdateKeyPropertiesParameters {
-            tags: Some(tags),
+            key_ops: map_vec(Some(operations), Into::into),
+            tags: map_tags(tags),
             ..Default::default()
         };
 
@@ -464,14 +472,18 @@ impl ValueParserFactory for KeySize {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum KeyType {
+    /// Elliptic curve key.
     Ec,
+    /// Elliptic curve key backed by an HSM. Requires premium vault.
     EcHsm,
+    /// RSA key.
     Rsa,
+    /// RSA key backed by an HSM. Requires premium vault.
     RsaHsm,
 }
 
-impl From<&KeyType> for azure_security_keyvault_keys::models::KeyType {
-    fn from(value: &KeyType) -> Self {
+impl From<KeyType> for azure_security_keyvault_keys::models::KeyType {
+    fn from(value: KeyType) -> Self {
         match value {
             KeyType::Ec => Self::EC,
             KeyType::EcHsm => Self::EcHsm,
@@ -481,10 +493,19 @@ impl From<&KeyType> for azure_security_keyvault_keys::models::KeyType {
     }
 }
 
+impl From<&KeyType> for azure_security_keyvault_keys::models::KeyType {
+    fn from(value: &KeyType) -> Self {
+        (*value).into()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum CurveName {
+    /// P-256 curve.
     P256,
+    /// P-384 curve.
     P384,
+    /// P-521 curve.
     P521,
 }
 
@@ -494,6 +515,71 @@ impl From<CurveName> for azure_security_keyvault_keys::models::CurveName {
             CurveName::P256 => Self::P256,
             CurveName::P384 => Self::P384,
             CurveName::P521 => Self::P521,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, ValueEnum)]
+pub enum KeyOperation {
+    /// Indicates that the key can be used to decrypt.
+    Decrypt,
+    /// Indicates that the key can be used to encrypt.
+    Encrypt,
+    /// Indicates that the private component of the key can be exported.
+    Export,
+    /// Indicates that the key can be imported during creation.
+    Import,
+    /// Indicates that the key can be used to sign.
+    Sign,
+    /// Indicates that the key can be used to verify.
+    Verify,
+    /// Indicates that the key can be used to wrap another key.
+    WrapKey,
+    /// Indicates that the key can be used to unwrap another key.
+    UnwrapKey,
+    /// An unknown value returned by the service.
+    #[value(skip)]
+    UnknownValue(String),
+}
+
+impl fmt::Display for KeyOperation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let value = self.to_possible_value();
+        f.write_str(value.as_ref().map_or_else(|| "(unknown)", |v| v.get_name()))
+    }
+}
+
+impl From<&KeyOperation> for azure_security_keyvault_keys::models::KeyOperation {
+    fn from(value: &KeyOperation) -> Self {
+        match value {
+            KeyOperation::Decrypt => Self::Decrypt,
+            KeyOperation::Encrypt => Self::Encrypt,
+            KeyOperation::Export => Self::Export,
+            KeyOperation::Import => Self::Import,
+            KeyOperation::Sign => Self::Sign,
+            KeyOperation::Verify => Self::Verify,
+            KeyOperation::WrapKey => Self::WrapKey,
+            KeyOperation::UnwrapKey => Self::UnwrapKey,
+            KeyOperation::UnknownValue(s) => Self::UnknownValue(s.clone()),
+        }
+    }
+}
+
+impl From<azure_security_keyvault_keys::models::KeyOperation> for KeyOperation {
+    fn from(value: azure_security_keyvault_keys::models::KeyOperation) -> Self {
+        match value {
+            azure_security_keyvault_keys::models::KeyOperation::Decrypt => Self::Decrypt,
+            azure_security_keyvault_keys::models::KeyOperation::Encrypt => Self::Encrypt,
+            azure_security_keyvault_keys::models::KeyOperation::Export => Self::Export,
+            azure_security_keyvault_keys::models::KeyOperation::Import => Self::Import,
+            azure_security_keyvault_keys::models::KeyOperation::Sign => Self::Sign,
+            azure_security_keyvault_keys::models::KeyOperation::Verify => Self::Verify,
+            azure_security_keyvault_keys::models::KeyOperation::WrapKey => Self::WrapKey,
+            azure_security_keyvault_keys::models::KeyOperation::UnwrapKey => Self::UnwrapKey,
+            azure_security_keyvault_keys::models::KeyOperation::UnknownValue(s) => {
+                Self::UnknownValue(s.clone())
+            }
+            _ => Self::UnknownValue("(unknown)".into()),
         }
     }
 }
@@ -526,6 +612,27 @@ fn show(key: &Key) -> Result<()> {
         ),
         _ => {}
     };
+    let key_ops = jwk
+        .key_ops
+        .as_ref()
+        .map(|v| {
+            let mut c: Vec<String> = v
+                .iter()
+                .map(|v| {
+                    v.parse::<azure_security_keyvault_keys::models::KeyOperation>()
+                        .unwrap() // Okay because FromStr::Err is Infallible
+                })
+                .map(Into::<KeyOperation>::into)
+                .map(|v| v.to_string())
+                .collect();
+            c.sort();
+            c
+        })
+        .unwrap_or_default();
+    println!("Key operations:");
+    for v in &key_ops {
+        println!("  {v}");
+    }
     println!(
         "Enabled: {}",
         key.attributes

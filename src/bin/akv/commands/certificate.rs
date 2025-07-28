@@ -3,7 +3,10 @@
 
 use super::{elapsed, VAULT_ENV_NAME};
 use crate::{
-    commands::key::{CurveName, KeySize, KeyType},
+    commands::{
+        key::{CurveName, KeySize, KeyType},
+        map_tags, map_vec, IsDefault,
+    },
     credential,
 };
 use akv_cli::{parsing::parse_key_value_opt, Error, ErrorKind, Result};
@@ -16,11 +19,11 @@ use azure_security_keyvault_certificates::{
     },
     CertificateClient, CertificateClientExt as _, ResourceExt as _, ResourceId,
 };
-use clap::Subcommand;
+use clap::{ArgAction, Subcommand, ValueEnum};
 use futures::TryStreamExt as _;
 use indicatif::ProgressBar;
 use prettytable::{color, format, Attr, Cell, Row, Table};
-use std::{collections::HashMap, time::Duration};
+use std::{fmt, time::Duration};
 use timeago::Formatter;
 use tracing::{Level, Span};
 
@@ -62,6 +65,22 @@ pub enum Commands {
         #[arg(long, value_enum, required_if_eq("type", "ec"))]
         curve: Option<CurveName>,
 
+        /// Set the private key as exportable.
+        #[arg(long, action = ArgAction::SetTrue, default_value_t = false)]
+        exportable: bool,
+
+        /// Reuse the same key pair when renewing the certificate.
+        #[arg(long, action = ArgAction::SetTrue, default_value_t = false)]
+        reuse_key: bool,
+
+        /// Key usage type.
+        #[arg(long, value_enum, value_delimiter = ',')]
+        key_usage: Vec<KeyUsageType>,
+
+        /// Enhanced key usage OIDs.
+        #[arg(long, value_delimiter = ',')]
+        enhanced_key_usage: Vec<String>,
+
         /// Tags to set on the certificate formatted as "name[=value]".
         /// Repeat argument once for each tag.
         #[arg(long, value_name = "NAME[=VALUE]", value_parser = parse_key_value_opt::<String>)]
@@ -81,6 +100,46 @@ pub enum Commands {
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
         #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Option<Url>,
+
+        /// The certificate issuer name.
+        #[arg(long)]
+        issuer: Option<String>,
+
+        /// The subject name.
+        #[arg(long)]
+        subject: Option<String>,
+
+        /// How many months the certificate is valid.
+        #[arg(long)]
+        validity: Option<u32>,
+
+        /// The key type.
+        #[arg(id = "type", long, value_enum)]
+        r#type: Option<KeyType>,
+
+        /// The key size in bits for RSA keys.
+        #[arg(long, value_parser, required_if_eq("type", "rsa"))]
+        size: Option<KeySize>,
+
+        /// The elliptic curve name for EC keys.
+        #[arg(long, value_enum, required_if_eq("type", "ec"))]
+        curve: Option<CurveName>,
+
+        /// Set the private key as exportable.
+        #[arg(long, action = ArgAction::SetTrue)]
+        exportable: Option<bool>,
+
+        /// Reuse the same key pair when renewing the certificate.
+        #[arg(long, action = ArgAction::SetTrue)]
+        reuse_key: Option<bool>,
+
+        /// Key usage type.
+        #[arg(long, value_enum, value_delimiter = ',')]
+        key_usage: Option<Vec<KeyUsageType>>,
+
+        /// Enhanced key usage OIDs.
+        #[arg(long, value_delimiter = ',')]
+        enhanced_key_usage: Option<Vec<String>>,
 
         /// Tags to set on the certificate formatted as "name[=value]".
         /// Repeat argument once for each tag.
@@ -156,6 +215,10 @@ impl Commands {
             r#type,
             size,
             curve,
+            exportable,
+            reuse_key,
+            key_usage,
+            enhanced_key_usage,
             tags,
         } = self
         else {
@@ -167,29 +230,30 @@ impl Commands {
         current.record("name", name);
 
         let client = CertificateClient::new(vault.as_str(), credential()?, None)?;
+
         let params = CreateCertificateParameters {
             certificate_policy: Some(CertificatePolicy {
                 key_properties: Some(KeyProperties {
                     key_type: Some(r#type.into()),
                     key_size: size.map(|value| *value),
                     curve: curve.map(Into::into),
-                    ..Default::default()
+                    exportable: Some(*exportable),
+                    reuse_key: Some(*reuse_key),
                 }),
                 issuer_parameters: Some(IssuerParameters {
                     name: Some(issuer.clone()),
                     ..Default::default()
                 }),
                 x509_certificate_properties: Some(X509CertificateProperties {
+                    key_usage: map_vec(Some(key_usage), Into::into),
+                    enhanced_key_usage: map_vec(Some(enhanced_key_usage), Clone::clone),
                     subject: Some(subject.clone()),
                     validity_in_months: Some(*validity as i32),
                     ..Default::default()
                 }),
                 ..Default::default()
             }),
-            tags: Some(HashMap::from_iter(
-                tags.iter()
-                    .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
-            )),
+            tags: map_tags(tags),
             ..Default::default()
         };
 
@@ -234,6 +298,16 @@ impl Commands {
             id,
             vault,
             name,
+            issuer,
+            subject,
+            validity,
+            r#type,
+            size,
+            curve,
+            exportable,
+            reuse_key,
+            key_usage,
+            enhanced_key_usage,
             tags,
         } = self
         else {
@@ -248,12 +322,34 @@ impl Commands {
 
         let client = CertificateClient::new(&vault, credential()?, None)?;
 
-        let tags = HashMap::from_iter(
-            tags.iter()
-                .map(|(k, v)| (k.to_string(), v.clone().unwrap_or_default())),
-        );
+        let key_properties = KeyProperties {
+            key_type: r#type.map(Into::into),
+            key_size: size.map(|value| *value),
+            curve: curve.map(Into::into),
+            exportable: exportable.map(Into::into),
+            reuse_key: reuse_key.map(Into::into),
+        };
+        let issuer_properties = IssuerParameters {
+            name: issuer.clone(),
+            ..Default::default()
+        };
+        let x509_certificate_properties = X509CertificateProperties {
+            key_usage: map_vec(key_usage.as_deref(), Into::into),
+            enhanced_key_usage: map_vec(enhanced_key_usage.as_deref(), Clone::clone),
+            subject: subject.clone(),
+            validity_in_months: validity.map(|v| v as i32),
+            ..Default::default()
+        };
+        let policy = CertificatePolicy {
+            key_properties: key_properties.default_or(),
+            issuer_parameters: issuer_properties.default_or(),
+            x509_certificate_properties: x509_certificate_properties.default_or(),
+            ..Default::default()
+        };
+
         let params = UpdateCertificatePropertiesParameters {
-            tags: Some(tags),
+            certificate_policy: policy.default_or(),
+            tags: map_tags(tags),
             ..Default::default()
         };
 
@@ -459,6 +555,32 @@ fn show(certificate: &Certificate) -> Result<()> {
             .map(|v| format!("{:X}", Bytes::copy_from_slice(v)))
             .unwrap_or_default()
     );
+    let x509_properties = certificate
+        .policy
+        .as_ref()
+        .and_then(|v| v.x509_certificate_properties.as_ref());
+    println!(
+        "Subject: {}",
+        x509_properties
+            .and_then(|v| v.subject.as_deref())
+            .unwrap_or_default()
+    );
+    let key_usage = x509_properties
+        .and_then(|v| v.key_usage.as_ref())
+        .map(|v| {
+            let mut c: Vec<String> = v
+                .iter()
+                .map(Into::<KeyUsageType>::into)
+                .map(|v| v.to_string())
+                .collect();
+            c.sort();
+            c
+        })
+        .unwrap_or_default();
+    println!("Key usage:");
+    for v in &key_usage {
+        println!("  {v}")
+    }
     println!(
         "Enabled: {}",
         certificate
@@ -521,14 +643,20 @@ fn show(certificate: &Certificate) -> Result<()> {
     Ok(())
 }
 
-impl From<&KeyType> for azure_security_keyvault_certificates::models::KeyType {
-    fn from(value: &KeyType) -> Self {
+impl From<KeyType> for azure_security_keyvault_certificates::models::KeyType {
+    fn from(value: KeyType) -> Self {
         match value {
             KeyType::Ec => Self::EC,
             KeyType::EcHsm => Self::EcHsm,
             KeyType::Rsa => Self::RSA,
             KeyType::RsaHsm => Self::RsaHsm,
         }
+    }
+}
+
+impl From<&KeyType> for azure_security_keyvault_certificates::models::KeyType {
+    fn from(value: &KeyType) -> Self {
+        (*value).into()
     }
 }
 
@@ -539,5 +667,130 @@ impl From<CurveName> for azure_security_keyvault_certificates::models::CurveName
             CurveName::P384 => Self::P384,
             CurveName::P521 => Self::P521,
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, ValueEnum)]
+pub enum KeyUsageType {
+    /// The certificate may be used to sign CRLs.
+    CRLSign,
+    /// The certificate may be used to encipher user data.
+    DataEncipherment,
+    /// The certificate may be used only for decryption when used with key agreement.
+    DecipherOnly,
+    /// The certificate may be used for digital signatures.
+    DigitalSignature,
+    /// The certificate may be used only for encryption when used with key agreement.
+    EncipherOnly,
+    /// The certificate may be used for key agreement.
+    KeyAgreement,
+    /// The certificate may be used to sign certificates.
+    KeyCertSign,
+    /// The certificate may be used to encipher private or secret keys.
+    KeyEncipherment,
+    /// The certificate may be used for non-repudiation.
+    NonRepudiation,
+    /// An unknown value returned by the service.
+    #[value(skip)]
+    UnknownValue(String),
+}
+
+impl fmt::Display for KeyUsageType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let value = self.to_possible_value();
+        f.write_str(value.as_ref().map_or_else(|| "(unknown)", |v| v.get_name()))
+    }
+}
+
+impl From<&KeyUsageType> for azure_security_keyvault_certificates::models::KeyUsageType {
+    fn from(value: &KeyUsageType) -> Self {
+        match value {
+            KeyUsageType::CRLSign => Self::CRLSign,
+            KeyUsageType::DataEncipherment => Self::DataEncipherment,
+            KeyUsageType::DecipherOnly => Self::DecipherOnly,
+            KeyUsageType::DigitalSignature => Self::DigitalSignature,
+            KeyUsageType::EncipherOnly => Self::EncipherOnly,
+            KeyUsageType::KeyAgreement => Self::KeyAgreement,
+            KeyUsageType::KeyCertSign => Self::KeyCertSign,
+            KeyUsageType::KeyEncipherment => Self::KeyEncipherment,
+            KeyUsageType::NonRepudiation => Self::NonRepudiation,
+            KeyUsageType::UnknownValue(s) => Self::UnknownValue(s.clone()),
+        }
+    }
+}
+
+impl From<&azure_security_keyvault_certificates::models::KeyUsageType> for KeyUsageType {
+    fn from(value: &azure_security_keyvault_certificates::models::KeyUsageType) -> Self {
+        match value {
+            azure_security_keyvault_certificates::models::KeyUsageType::CRLSign => Self::CRLSign,
+            azure_security_keyvault_certificates::models::KeyUsageType::DataEncipherment => {
+                Self::DataEncipherment
+            }
+            azure_security_keyvault_certificates::models::KeyUsageType::DecipherOnly => {
+                Self::DecipherOnly
+            }
+            azure_security_keyvault_certificates::models::KeyUsageType::DigitalSignature => {
+                Self::DigitalSignature
+            }
+            azure_security_keyvault_certificates::models::KeyUsageType::EncipherOnly => {
+                Self::EncipherOnly
+            }
+            azure_security_keyvault_certificates::models::KeyUsageType::KeyAgreement => {
+                Self::KeyAgreement
+            }
+            azure_security_keyvault_certificates::models::KeyUsageType::KeyCertSign => {
+                Self::KeyCertSign
+            }
+            azure_security_keyvault_certificates::models::KeyUsageType::KeyEncipherment => {
+                Self::KeyEncipherment
+            }
+            azure_security_keyvault_certificates::models::KeyUsageType::NonRepudiation => {
+                Self::NonRepudiation
+            }
+            azure_security_keyvault_certificates::models::KeyUsageType::UnknownValue(s) => {
+                Self::UnknownValue(s.clone())
+            }
+            _ => Self::UnknownValue("(unknown)".into()),
+        }
+    }
+}
+
+impl IsDefault for KeyProperties {
+    fn is_default(&self) -> bool {
+        self.curve.is_none()
+            && self.exportable.is_none()
+            && self.key_size.is_none()
+            && self.key_type.is_none()
+            && self.reuse_key.is_none()
+    }
+}
+
+impl IsDefault for IssuerParameters {
+    fn is_default(&self) -> bool {
+        self.certificate_transparency.is_none()
+            && self.certificate_type.is_none()
+            && self.name.is_none()
+    }
+}
+
+impl IsDefault for X509CertificateProperties {
+    fn is_default(&self) -> bool {
+        self.enhanced_key_usage.is_none()
+            && self.key_usage.is_none()
+            && self.subject.is_none()
+            && self.subject_alternative_names.is_none()
+            && self.validity_in_months.is_none()
+    }
+}
+
+impl IsDefault for CertificatePolicy {
+    fn is_default(&self) -> bool {
+        self.attributes.is_none()
+            && self.id.is_none()
+            && self.issuer_parameters.is_none()
+            && self.key_properties.is_none()
+            && self.lifetime_actions.is_none()
+            && self.secret_properties.is_none()
+            && self.x509_certificate_properties.is_none()
     }
 }
