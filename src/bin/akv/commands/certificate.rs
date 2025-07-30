@@ -104,6 +104,29 @@ pub enum Commands {
         #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Option<Url>,
 
+        #[command(flatten)]
+        attributes: AttributeArgs,
+
+        /// Tags to set on the certificate formatted as "name[=value]".
+        /// Repeat argument once for each tag.
+        #[arg(long, value_name = "NAME[=VALUE]", value_parser = parse_key_value_opt::<String>)]
+        tags: Vec<(String, Option<String>)>,
+    },
+
+    /// Edits the certificate policy for the next certificate request.
+    EditPolicy {
+        /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificate/my-certificate".
+        #[arg(group = "ident", value_name = "URL")]
+        id: Option<Url>,
+
+        /// The certificate name.
+        #[arg(long, group = "ident", requires = "vault")]
+        name: Option<String>,
+
+        /// The vault URL e.g., "https://my-vault.vault.azure.net".
+        #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
+        vault: Option<Url>,
+
         /// The certificate issuer name.
         #[arg(long)]
         issuer: Option<String>,
@@ -143,14 +166,6 @@ pub enum Commands {
         /// Enhanced key usage OIDs.
         #[arg(long, value_delimiter = ',')]
         enhanced_key_usage: Option<Vec<String>>,
-
-        #[command(flatten)]
-        attributes: AttributeArgs,
-
-        /// Tags to set on the certificate formatted as "name[=value]".
-        /// Repeat argument once for each tag.
-        #[arg(long, value_name = "NAME[=VALUE]", value_parser = parse_key_value_opt::<String>)]
-        tags: Vec<(String, Option<String>)>,
     },
 
     /// Gets information about a certificate in an Azure Key Vault.
@@ -204,6 +219,7 @@ impl Commands {
         match &self {
             Commands::Create { .. } => self.create().await,
             Commands::Edit { .. } => self.edit().await,
+            Commands::EditPolicy { .. } => self.edit_policy().await,
             Commands::Get { .. } => self.get().await,
             Commands::List { .. } => self.list().await,
             Commands::ListVersions { .. } => self.list_versions().await,
@@ -317,16 +333,6 @@ impl Commands {
             id,
             vault,
             name,
-            issuer,
-            subject,
-            validity,
-            r#type,
-            size,
-            curve,
-            exportable,
-            reuse_key,
-            key_usage,
-            enhanced_key_usage,
             attributes:
                 AttributeArgs {
                     enabled,
@@ -353,6 +359,55 @@ impl Commands {
             not_before: *not_before,
             ..Default::default()
         };
+        let params = UpdateCertificatePropertiesParameters {
+            tags: map_tags(tags),
+            certificate_attributes: certificate_attributes.default_or(),
+            ..Default::default()
+        };
+
+        let certificate = client
+            .update_certificate_properties(
+                &name,
+                version.as_deref().unwrap_or_default(),
+                params.try_into()?,
+                None,
+            )
+            .await?
+            .into_body()
+            .await?;
+
+        show(&certificate)
+    }
+
+    #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
+    async fn edit_policy(&self) -> Result<()> {
+        let Commands::EditPolicy {
+            id,
+            vault,
+            name,
+            issuer,
+            subject,
+            validity,
+            r#type,
+            size,
+            curve,
+            exportable,
+            reuse_key,
+            key_usage,
+            enhanced_key_usage,
+        } = self
+        else {
+            panic!("invalid command");
+        };
+
+        let (vault, name, version) = super::select(id.as_ref(), vault.as_ref(), name.as_ref())?;
+        let current = Span::current();
+        current.record("vault", &*vault);
+        current.record("name", &*name);
+        current.record("version", version.as_deref());
+
+        let client = CertificateClient::new(&vault, credential()?, None)?;
+
         let key_properties = KeyProperties {
             key_type: r#type.map(Into::into),
             key_size: size.map(|value| *value),
@@ -379,8 +434,7 @@ impl Commands {
         };
         let params = UpdateCertificatePropertiesParameters {
             certificate_policy: policy.default_or(),
-            tags: map_tags(tags),
-            certificate_attributes: certificate_attributes.default_or(),
+            ..Default::default()
         };
 
         let certificate = client
