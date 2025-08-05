@@ -67,17 +67,12 @@ impl TypeName for SecretClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use azure_core::credentials::TokenCredential;
     use azure_identity::DefaultAzureCredential;
     use azure_security_keyvault_secrets::SecretClient;
 
     #[tokio::test]
     async fn test_client_cache() {
-        let credential: Arc<dyn TokenCredential> = unsafe {
-            let credential: Arc<dyn azure_core_26::credentials::TokenCredential> =
-                DefaultAzureCredential::new().unwrap();
-            std::mem::transmute(credential)
-        };
+        let credential = DefaultAzureCredential::new().unwrap();
 
         let cache = ClientCache::<SecretClient>::new();
         cache

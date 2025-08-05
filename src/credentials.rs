@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use async_lock::RwLock;
-use azure_core_26::{
+use azure_core::{
     credentials::{AccessToken, TokenCredential, TokenRequestOptions},
     error::{Error, ErrorKind},
 };
@@ -26,11 +26,6 @@ impl DeveloperCredential {
             credential: RwLock::new(None),
         })
     }
-
-    pub fn transmute(self: &Arc<Self>) -> Arc<dyn azure_core::credentials::TokenCredential> {
-        let credential = self.clone() as Arc<dyn TokenCredential>;
-        unsafe { std::mem::transmute(credential) }
-    }
 }
 
 #[async_trait::async_trait]
@@ -39,7 +34,7 @@ impl TokenCredential for DeveloperCredential {
         &self,
         scopes: &[&str],
         options: Option<TokenRequestOptions>,
-    ) -> azure_core_26::Result<AccessToken> {
+    ) -> azure_core::Result<AccessToken> {
         if let Some(credential) = self.credential.read().await.as_ref() {
             return credential.get_token(scopes, options).await;
         }
@@ -62,7 +57,7 @@ impl TokenCredential for DeveloperCredential {
                         }
                         Err(err) => {
                             tracing::debug!(target: "akv::credentials", "failed acquiring token: {err}");
-                            Err(err)?
+                            Err(err)
                         }
                     },
                     Err(err) => {
@@ -118,7 +113,7 @@ impl From<&DeveloperCredentialOptions> for AzureDeveloperCliCredentialOptions {
 type CredentialFn = (
     &'static str,
     Box<
-        dyn Fn(Option<&DeveloperCredentialOptions>) -> crate::Result<Arc<dyn TokenCredential>>
+        dyn Fn(Option<&DeveloperCredentialOptions>) -> azure_core::Result<Arc<dyn TokenCredential>>
             + Send
             + Sync
             + 'static,
@@ -140,7 +135,7 @@ static CREDENTIALS: LazyLock<Vec<CredentialFn>> = LazyLock::new(|| {
     ]
 });
 
-fn aggregate(errors: &[crate::Error]) -> String {
+fn aggregate(errors: &[Error]) -> String {
     use std::error::Error;
     errors
         .iter()
@@ -163,15 +158,13 @@ mod tests {
 
     #[test]
     fn aggregate_multiple_errors() {
-        use crate::error::{Error, ErrorKind};
-
         let errors = vec![
-            Error::with_error(
+            Error::full(
                 ErrorKind::Other,
-                Error::with_message(ErrorKind::Other, "first inner error"),
+                Error::message(ErrorKind::Other, "first inner error"),
                 "first outer error",
             ),
-            Error::with_message(ErrorKind::Other, "second error"),
+            Error::message(ErrorKind::Other, "second error"),
         ];
         assert_eq!(
             aggregate(&errors),
