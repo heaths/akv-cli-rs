@@ -17,7 +17,7 @@ use azure_security_keyvault_certificates::{
         CreateCertificateParameters, IssuerParameters, KeyProperties,
         UpdateCertificatePropertiesParameters, X509CertificateProperties,
     },
-    CertificateClient, CertificateClientExt as _, ResourceExt as _, ResourceId,
+    CertificateClient, ResourceExt as _, ResourceId,
 };
 use clap::{ArgAction, Subcommand, ValueEnum};
 use futures::TryStreamExt as _;
