@@ -53,7 +53,12 @@ async fn main() -> Result<()> {
     #[cfg(debug_assertions)]
     if loaded_env {
         tracing::debug!("loaded environment variables from azd");
-        let _ = CREDENTIAL.set(AzureDeveloperCliCredential::new(None)? as Arc<dyn TokenCredential>);
+        let credential: Arc<dyn TokenCredential> = unsafe {
+            let credential: Arc<dyn azure_core_26::credentials::TokenCredential> =
+                AzureDeveloperCliCredential::new(None)?;
+            std::mem::transmute(credential)
+        };
+        let _ = CREDENTIAL.set(credential);
     }
 
     args.handle().await
@@ -80,6 +85,6 @@ static CREDENTIAL: OnceCell<Arc<dyn TokenCredential>> = OnceCell::new();
 
 pub(crate) fn credential() -> Result<Arc<dyn TokenCredential>> {
     CREDENTIAL
-        .get_or_try_init(|| Ok(DeveloperCredential::new(None)))
+        .get_or_try_init(|| Ok(DeveloperCredential::new(None).transmute()))
         .cloned()
 }
