@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use akv_cli::{ErrorKind, ResultExt};
-use azure_core_26::credentials::Secret;
+use azure_core::credentials::Secret;
 use azure_identity::ClientSecretCredential;
 use azure_storage_blob::BlobServiceClient;
 use clap::{Parser, Subcommand};

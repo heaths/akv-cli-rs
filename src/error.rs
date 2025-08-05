@@ -180,12 +180,6 @@ impl From<azure_core::Error> for Error {
     }
 }
 
-impl From<azure_core_26::Error> for Error {
-    fn from(error: azure_core_26::Error) -> Self {
-        Self::new(ErrorKind::Other, error)
-    }
-}
-
 impl From<dotenvy::Error> for Error {
     fn from(error: dotenvy::Error) -> Self {
         Self::new(ErrorKind::Other, error)
