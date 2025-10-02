@@ -1,0 +1,23 @@
+{
+  "ensure_final_newline_on_save": true,
+  "format_on_save": "on",
+  "remove_trailing_whitespace_on_save": true,
+  "tab_size": 4,
+
+  "auto_install_extensions": {
+    "bicep": true,
+    "toml": true
+  },
+
+  "languages": {
+    "Bicep": {
+      "tab_size": 2
+    },
+    "JSON": {
+      "tab_size": 2
+    },
+    "YAML": {
+      "tab_size": 2
+    }
+  }
+}

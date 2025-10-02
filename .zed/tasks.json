@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Setup",
+    "shell": {
+      "program": "sh"
+    },
+    "command": "source examples/setup.sh",
+    "cwd": "$ZED_WORKTREE_ROOT"
+  }
+]

@@ -22,7 +22,8 @@
     "repr",
     "rustlang",
     "rustup",
-    "symm"
+    "symm",
+    "worktree"
   ],
   "dictionaryDefinitions": [
     {
