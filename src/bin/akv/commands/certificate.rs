@@ -183,6 +183,21 @@ pub enum Commands {
         vault: Option<Url>,
     },
 
+    /// Gets the certificate policy for the next version of a certificate created in an Azure Key Vault.
+    GetPolicy {
+        /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificates/my-certificate".
+        #[arg(group = "ident", value_name = "URL")]
+        id: Option<Url>,
+
+        /// The certificate name.
+        #[arg(long, group = "ident", requires = "vault")]
+        name: Option<String>,
+
+        /// The vault URL e.g., "https://my-vault.vault.azure.net".
+        #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
+        vault: Option<Url>,
+    },
+
     /// List certificate in an Azure Key Vault.
     List {
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -221,6 +236,7 @@ impl Commands {
             Commands::Edit { .. } => self.edit().await,
             Commands::EditPolicy { .. } => self.edit_policy().await,
             Commands::Get { .. } => self.get().await,
+            Commands::GetPolicy { .. } => self.get_policy().await,
             Commands::List { .. } => self.list().await,
             Commands::ListVersions { .. } => self.list_versions().await,
         }
@@ -448,7 +464,12 @@ impl Commands {
             .into_body()
             .await?;
 
-        show(&certificate)
+        if let Some(policy) = certificate.policy {
+            let json = super::json(&policy)?;
+            println!("{json:#}");
+        }
+
+        Ok(())
     }
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
@@ -471,6 +492,30 @@ impl Commands {
             .await?;
 
         show(&certificate)
+    }
+
+    #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name), err)]
+    async fn get_policy(&self) -> std::result::Result<(), Error> {
+        let Commands::GetPolicy { id, name, vault } = self else {
+            panic!("Invalid command");
+        };
+
+        let (vault, name, ..) = super::select(id.as_ref(), vault.as_ref(), name.as_ref())?;
+        let current = Span::current();
+        current.record("vault", &*vault);
+        current.record("name", &*name);
+
+        let client = CertificateClient::new(&vault, credential()?, None)?;
+        let policy = client
+            .get_certificate_policy(&name, None)
+            .await?
+            .into_body()
+            .await?;
+
+        let json = super::json(&policy)?;
+        println!("{json:#}");
+
+        Ok(())
     }
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault), err)]
