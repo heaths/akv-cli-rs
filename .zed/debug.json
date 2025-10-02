@@ -1,0 +1,16 @@
+[
+  {
+    "label": "Run (with masking)",
+    "adapter": "CodeLLDB",
+    "build": {
+      "command": "cargo",
+      "args": ["build", "--bin=akv"]
+    },
+    "request": "launch",
+    "program": "target/debug/akv",
+    "args": ["run", "--", "cargo", "run", "--example=printenv"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "envFile": ".azure/dev/.env",
+    "sourceLanguages": ["rust"]
+  }
+]
