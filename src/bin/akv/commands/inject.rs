@@ -9,7 +9,9 @@ use akv_cli::{
     ErrorKind, Result,
 };
 use azure_core::http::Url;
-use azure_security_keyvault_secrets::{ResourceId, SecretClient};
+use azure_security_keyvault_secrets::{
+    models::SecretClientGetSecretOptions, ResourceId, SecretClient,
+};
 use clap::Parser;
 use futures::FutureExt as _;
 use std::{
@@ -100,10 +102,15 @@ impl Args {
                     .await?;
 
                 let secret = client
-                    .get_secret(&id.name, id.version.as_deref().unwrap_or_default(), None)
+                    .get_secret(
+                        &id.name,
+                        Some(SecretClientGetSecretOptions {
+                            secret_version: id.version.as_deref().map(Into::into),
+                            ..Default::default()
+                        }),
+                    )
                     .await?
-                    .into_body()
-                    .await?;
+                    .into_body()?;
 
                 Ok(secret.value.unwrap_or_else(String::new))
             }

@@ -359,9 +359,9 @@ impl TryFrom<&Algorithm> for azure_security_keyvault_keys::models::EncryptionAlg
     type Error = Error;
     fn try_from(value: &Algorithm) -> Result<Self> {
         match value {
-            Algorithm::RSA1_5 => Ok(Self::RSA1_5),
+            Algorithm::RSA1_5 => Ok(Self::Rsa1_5),
             Algorithm::RSA_OAEP => Ok(Self::RsaOaep),
-            Algorithm::RSA_OAEP_256 => Ok(Self::RsaOAEP256),
+            Algorithm::RSA_OAEP_256 => Ok(Self::RsaOaep256),
             Algorithm::Other(s) => Err(Error::with_message_fn(ErrorKind::InvalidData, || {
                 format!("unsupported algorithm {s}")
             })),

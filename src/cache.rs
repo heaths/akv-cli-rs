@@ -67,12 +67,12 @@ impl TypeName for SecretClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use azure_identity::DefaultAzureCredential;
+    use azure_identity::AzureDeveloperCliCredential;
     use azure_security_keyvault_secrets::SecretClient;
 
     #[tokio::test]
     async fn test_client_cache() {
-        let credential = DefaultAzureCredential::new().unwrap();
+        let credential = AzureDeveloperCliCredential::new(None).unwrap();
 
         let cache = ClientCache::<SecretClient>::new();
         cache

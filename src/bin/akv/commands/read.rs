@@ -5,7 +5,7 @@ use super::VAULT_ENV_NAME;
 use crate::credential;
 use akv_cli::Result;
 use azure_core::http::Url;
-use azure_security_keyvault_secrets::SecretClient;
+use azure_security_keyvault_secrets::{models::SecretClientGetSecretOptions, SecretClient};
 use clap::Parser;
 use std::{
     fs,
@@ -54,10 +54,15 @@ impl Args {
 
         let client = SecretClient::new(&vault, credential()?, None)?;
         let secret = client
-            .get_secret(&name, version.as_deref().unwrap_or_default(), None)
+            .get_secret(
+                &name,
+                Some(SecretClientGetSecretOptions {
+                    secret_version: version.map(Into::into),
+                    ..Default::default()
+                }),
+            )
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
         tracing::debug!("retrieved {:?}", &secret);
 
         if let Some(value) = secret.value {

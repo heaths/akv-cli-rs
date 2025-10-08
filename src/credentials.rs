@@ -33,7 +33,7 @@ impl TokenCredential for DeveloperCredential {
     async fn get_token(
         &self,
         scopes: &[&str],
-        options: Option<TokenRequestOptions>,
+        options: Option<TokenRequestOptions<'_>>,
     ) -> azure_core::Result<AccessToken> {
         if let Some(credential) = self.credential.read().await.as_ref() {
             return credential.get_token(scopes, options).await;
@@ -74,7 +74,7 @@ impl TokenCredential for DeveloperCredential {
             }
         }
 
-        Err(Error::with_message(ErrorKind::Credential, || {
+        Err(Error::with_message_fn(ErrorKind::Credential, || {
             format!(
                 "Multiple errors when attempting to authenticate:\n{}",
                 aggregate(&errors)
@@ -159,12 +159,12 @@ mod tests {
     #[test]
     fn aggregate_multiple_errors() {
         let errors = vec![
-            Error::full(
+            Error::with_error(
                 ErrorKind::Other,
-                Error::message(ErrorKind::Other, "first inner error"),
+                Error::with_message(ErrorKind::Other, "first inner error"),
                 "first outer error",
             ),
-            Error::message(ErrorKind::Other, "second error"),
+            Error::with_message(ErrorKind::Other, "second error"),
         ];
         assert_eq!(
             aggregate(&errors),

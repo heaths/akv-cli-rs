@@ -88,7 +88,9 @@ resource stg 'Microsoft.Storage/storageAccounts@2025-01-01' = {
   }
   kind: 'StorageV2'
   properties: {
+    allowSharedKeyAccess: false
     isLocalUserEnabled: false
+    minimumTlsVersion: 'TLS1_2'
     publicNetworkAccess: 'Enabled'
   }
 
