@@ -13,8 +13,9 @@ use akv_cli::{parsing::parse_key_value_opt, Error, ErrorKind, Result};
 use azure_core::{http::Url, time::OffsetDateTime, Bytes};
 use azure_security_keyvault_certificates::{
     models::{
-        Certificate, CertificateAttributes, CertificatePolicy, CertificateProperties,
-        CreateCertificateParameters, IssuerParameters, KeyProperties,
+        Certificate, CertificateAttributes, CertificateClientGetCertificateOptions,
+        CertificateClientUpdateCertificatePropertiesOptions, CertificatePolicy,
+        CertificateProperties, CreateCertificateParameters, IssuerParameters, KeyProperties,
         UpdateCertificatePropertiesParameters, X509CertificateProperties,
     },
     CertificateClient, ResourceExt as _, ResourceId,
@@ -314,8 +315,7 @@ impl Commands {
             .begin_create_certificate(name, params.try_into()?, None)?
             .wait()
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
         spinner.finish_and_clear();
 
         if !matches!(status.status, Some(status) if status == "completed") {
@@ -335,10 +335,15 @@ impl Commands {
         };
         let ResourceId { name, version, .. } = target.parse()?;
         let certificate = client
-            .get_certificate(&name, &version.unwrap_or_default(), None)
+            .get_certificate(
+                &name,
+                Some(CertificateClientGetCertificateOptions {
+                    certificate_version: version,
+                    ..Default::default()
+                }),
+            )
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
 
         show(&certificate)
     }
@@ -384,13 +389,14 @@ impl Commands {
         let certificate = client
             .update_certificate_properties(
                 &name,
-                version.as_deref().unwrap_or_default(),
                 params.try_into()?,
-                None,
+                Some(CertificateClientUpdateCertificatePropertiesOptions {
+                    certificate_version: version.map(Into::into),
+                    ..Default::default()
+                }),
             )
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
 
         show(&certificate)
     }
@@ -456,13 +462,14 @@ impl Commands {
         let certificate = client
             .update_certificate_properties(
                 &name,
-                version.as_deref().unwrap_or_default(),
                 params.try_into()?,
-                None,
+                Some(CertificateClientUpdateCertificatePropertiesOptions {
+                    certificate_version: version.map(Into::into),
+                    ..Default::default()
+                }),
             )
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
 
         if let Some(policy) = certificate.policy {
             let json = super::json(&policy)?;
@@ -486,10 +493,15 @@ impl Commands {
 
         let client = CertificateClient::new(&vault, credential()?, None)?;
         let certificate = client
-            .get_certificate(&name, version.as_deref().unwrap_or_default(), None)
+            .get_certificate(
+                &name,
+                Some(CertificateClientGetCertificateOptions {
+                    certificate_version: version.map(Into::into),
+                    ..Default::default()
+                }),
+            )
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
 
         show(&certificate)
     }
@@ -509,8 +521,7 @@ impl Commands {
         let policy = client
             .get_certificate_policy(&name, None)
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
 
         let json = super::json(&policy)?;
         println!("{json:#}");
@@ -775,9 +786,9 @@ fn show(certificate: &Certificate) -> Result<()> {
 impl From<KeyType> for azure_security_keyvault_certificates::models::KeyType {
     fn from(value: KeyType) -> Self {
         match value {
-            KeyType::Ec => Self::EC,
+            KeyType::Ec => Self::Ec,
             KeyType::EcHsm => Self::EcHsm,
-            KeyType::Rsa => Self::RSA,
+            KeyType::Rsa => Self::Rsa,
             KeyType::RsaHsm => Self::RsaHsm,
         }
     }
@@ -834,7 +845,7 @@ impl fmt::Display for KeyUsageType {
 impl From<&KeyUsageType> for azure_security_keyvault_certificates::models::KeyUsageType {
     fn from(value: &KeyUsageType) -> Self {
         match value {
-            KeyUsageType::CRLSign => Self::CRLSign,
+            KeyUsageType::CRLSign => Self::CRlSign,
             KeyUsageType::DataEncipherment => Self::DataEncipherment,
             KeyUsageType::DecipherOnly => Self::DecipherOnly,
             KeyUsageType::DigitalSignature => Self::DigitalSignature,
@@ -851,7 +862,7 @@ impl From<&KeyUsageType> for azure_security_keyvault_certificates::models::KeyUs
 impl From<&azure_security_keyvault_certificates::models::KeyUsageType> for KeyUsageType {
     fn from(value: &azure_security_keyvault_certificates::models::KeyUsageType) -> Self {
         match value {
-            azure_security_keyvault_certificates::models::KeyUsageType::CRLSign => Self::CRLSign,
+            azure_security_keyvault_certificates::models::KeyUsageType::CRlSign => Self::CRLSign,
             azure_security_keyvault_certificates::models::KeyUsageType::DataEncipherment => {
                 Self::DataEncipherment
             }

@@ -4,9 +4,12 @@
 use crate::{credential, pty::CommandExt as _};
 use akv_cli::{cache::ClientCache, jose::Jwe, ErrorKind, Result};
 use azure_security_keyvault_keys::{
-    models::KeyOperationParameters, KeyClient, ResourceId as KeyResourceId,
+    models::{KeyClientUnwrapKeyOptions, KeyOperationParameters},
+    KeyClient, ResourceId as KeyResourceId,
 };
-use azure_security_keyvault_secrets::{ResourceId as SecretResourceId, SecretClient};
+use azure_security_keyvault_secrets::{
+    models::SecretClientGetSecretOptions, ResourceId as SecretResourceId, SecretClient,
+};
 use clap::Parser;
 use std::{
     collections::HashMap,
@@ -78,10 +81,15 @@ impl Args {
                     })
                     .await?;
                 let secret = client
-                    .get_secret(&id.name, id.version.as_deref().unwrap_or_default(), None)
+                    .get_secret(
+                        &id.name,
+                        Some(SecretClientGetSecretOptions {
+                            secret_version: id.version.as_deref().map(Into::into),
+                            ..Default::default()
+                        }),
+                    )
                     .await?
-                    .into_body()
-                    .await?;
+                    .into_body()?;
 
                 tracing::debug!("retrieved {:?}", &secret);
                 let Some(secret) = secret.value else {
@@ -127,10 +135,16 @@ impl Args {
                             ..Default::default()
                         };
                         client
-                            .unwrap_key(&name, version, params.try_into()?, None)
+                            .unwrap_key(
+                                &name,
+                                params.try_into()?,
+                                Some(KeyClientUnwrapKeyOptions {
+                                    key_version: Some(version.into()),
+                                    ..Default::default()
+                                }),
+                            )
                             .await?
-                            .into_body()
-                            .await?
+                            .into_body()?
                             .try_into()
                     })
                     .await?;

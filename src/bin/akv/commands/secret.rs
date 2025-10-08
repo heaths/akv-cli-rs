@@ -13,7 +13,8 @@ use akv_cli::{
 use azure_core::{http::Url, time::OffsetDateTime};
 use azure_security_keyvault_secrets::{
     models::{
-        Secret, SecretAttributes, SecretProperties, SetSecretParameters,
+        Secret, SecretAttributes, SecretClientGetSecretOptions,
+        SecretClientUpdateSecretPropertiesOptions, SecretProperties, SetSecretParameters,
         UpdateSecretPropertiesParameters,
     },
     ResourceExt, ResourceId, SecretClient,
@@ -179,8 +180,7 @@ impl Commands {
         let secret = client
             .set_secret(name, params.try_into()?, None)
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
 
         show(&secret)
     }
@@ -227,13 +227,14 @@ impl Commands {
         let secret = client
             .update_secret_properties(
                 &name,
-                version.as_deref().unwrap_or_default(),
                 params.try_into()?,
-                None,
+                Some(SecretClientUpdateSecretPropertiesOptions {
+                    secret_version: version.map(Into::into),
+                    ..Default::default()
+                }),
             )
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
 
         show(&secret)
     }
@@ -252,10 +253,15 @@ impl Commands {
 
         let client = SecretClient::new(&vault, credential()?, None)?;
         let secret = client
-            .get_secret(&name, version.as_deref().unwrap_or_default(), None)
+            .get_secret(
+                &name,
+                Some(SecretClientGetSecretOptions {
+                    secret_version: version.map(Into::into),
+                    ..Default::default()
+                }),
+            )
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
 
         show(&secret)
     }

@@ -10,7 +10,8 @@ use akv_cli::{parsing::parse_key_value_opt, Result};
 use azure_core::{http::Url, time::OffsetDateTime};
 use azure_security_keyvault_keys::{
     models::{
-        CreateKeyParameters, Key, KeyAttributes, KeyProperties, KeyType as JsonKeyType,
+        CreateKeyParameters, Key, KeyAttributes, KeyClientGetKeyOptions,
+        KeyClientUpdateKeyPropertiesOptions, KeyProperties, KeyType as JsonKeyType,
         UpdateKeyPropertiesParameters,
     },
     KeyClient, ResourceExt as _, ResourceId,
@@ -198,8 +199,7 @@ impl Commands {
         let key = client
             .create_key(name, params.try_into()?, None)
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
 
         show(&key)
     }
@@ -247,13 +247,14 @@ impl Commands {
         let key = client
             .update_key_properties(
                 &name,
-                version.as_deref().unwrap_or_default(),
                 params.try_into()?,
-                None,
+                Some(KeyClientUpdateKeyPropertiesOptions {
+                    key_version: version.map(Into::into),
+                    ..Default::default()
+                }),
             )
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
 
         show(&key)
     }
@@ -272,10 +273,15 @@ impl Commands {
 
         let client = KeyClient::new(&vault, credential()?, None)?;
         let key = client
-            .get_key(&name, version.as_deref().unwrap_or_default(), None)
+            .get_key(
+                &name,
+                Some(KeyClientGetKeyOptions {
+                    key_version: version.map(Into::into),
+                    ..Default::default()
+                }),
+            )
             .await?
-            .into_body()
-            .await?;
+            .into_body()?;
 
         show(&key)
     }
@@ -517,9 +523,9 @@ pub enum KeyType {
 impl From<KeyType> for azure_security_keyvault_keys::models::KeyType {
     fn from(value: KeyType) -> Self {
         match value {
-            KeyType::Ec => Self::EC,
+            KeyType::Ec => Self::Ec,
             KeyType::EcHsm => Self::EcHsm,
-            KeyType::Rsa => Self::RSA,
+            KeyType::Rsa => Self::Rsa,
             KeyType::RsaHsm => Self::RsaHsm,
         }
     }
@@ -639,12 +645,12 @@ fn show(key: &Key) -> Result<()> {
             .map_or_else(String::new, ToString::to_string)
     );
     match jwk.kty {
-        Some(JsonKeyType::RSA | JsonKeyType::RsaHsm) => println!(
+        Some(JsonKeyType::Rsa | JsonKeyType::RsaHsm) => println!(
             "Size: {}",
             jwk.n
                 .map_or_else(String::new, |n| (n.len() * 8).to_string())
         ),
-        Some(JsonKeyType::EC | JsonKeyType::EcHsm) => println!(
+        Some(JsonKeyType::Ec | JsonKeyType::EcHsm) => println!(
             "Curve: {}",
             jwk.crv.map_or_else(String::new, |crv| crv.to_string())
         ),
