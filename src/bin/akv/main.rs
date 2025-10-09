@@ -6,12 +6,14 @@
 mod commands;
 mod pty;
 
-use akv_cli::{credentials::DeveloperCredential, Result};
+use akv_cli::{credentials::DeveloperCredential, json::ColorMode, Result};
 #[cfg(debug_assertions)]
 use akv_cli::{ErrorKind, ResultExt as _};
 use azure_core::credentials::TokenCredential;
 #[cfg(debug_assertions)]
 use azure_identity::AzureDeveloperCliCredential;
+#[cfg(feature = "color")]
+use clap::ColorChoice;
 use clap::Parser;
 use commands::Commands;
 use once_cell::sync::OnceCell;
@@ -65,14 +67,31 @@ struct Args {
     #[command(subcommand)]
     command: Commands,
 
+    /// Print colors.
+    #[cfg(feature = "color")]
+    #[arg(short = 'c', long, default_value_t, global = true)]
+    color: ColorChoice,
+
     /// Log verbose messages. Pass `-vv` to log more verbosely.
     #[arg(global = true, short = 'v', long, action = clap::ArgAction::Count)]
     verbose: u8,
 }
 
 impl Args {
+    fn color(&self) -> ColorMode {
+        #[cfg(feature = "color")]
+        match self.color {
+            ColorChoice::Always => ColorMode::Always,
+            ColorChoice::Never => ColorMode::Never,
+            ColorChoice::Auto => ColorMode::Auto,
+        }
+
+        #[cfg(not(feature = "color"))]
+        ColorMode::Never
+    }
+
     async fn handle(&self) -> Result<()> {
-        self.command.handle().await
+        self.command.handle(self).await
     }
 }
 

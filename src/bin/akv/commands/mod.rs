@@ -10,12 +10,10 @@ mod read;
 mod run;
 mod secret;
 
-use akv_cli::{parsing::parse_date_time_opt, ErrorKind, Result, ResultExt as _};
+use akv_cli::{parsing::parse_date_time_opt, ErrorKind, Result};
 use azure_security_keyvault_secrets::ResourceId;
 use clap::{ArgAction, Args, CommandFactory, Subcommand};
 use clap_complete::{generate, Shell};
-use serde::Serialize;
-use serde_json::Value;
 use std::{borrow::Cow, collections::HashMap, io};
 use time::OffsetDateTime;
 use url::Url;
@@ -60,11 +58,11 @@ pub enum Commands {
 }
 
 impl Commands {
-    pub async fn handle(&self) -> Result<()> {
+    pub async fn handle(&self, global_args: &crate::Args) -> Result<()> {
         match self {
             Commands::Secret(command) => command.handle().await,
             Commands::Key(command) => command.handle().await,
-            Commands::Certificate(command) => command.handle().await,
+            Commands::Certificate(command) => command.handle(global_args).await,
             Commands::Inject(args) => args.inject().await,
             Commands::Read(args) => args.read().await,
             Commands::Run(args) => args.run().await,
@@ -118,10 +116,6 @@ fn elapsed(
     d.map(|time| now - time)
         .and_then(|time| time.try_into().ok())
         .map_or_else(String::new, |d| formatter.convert(d))
-}
-
-fn json<T: Serialize>(value: &T) -> akv_cli::Result<Value> {
-    serde_json::to_value(value).with_context_fn(ErrorKind::Other, || "failed serialization")
 }
 
 fn map_tags(tags: &[(String, Option<String>)]) -> Option<HashMap<String, String>> {
