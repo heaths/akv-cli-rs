@@ -125,6 +125,30 @@ Read complete usage using `--help`:
 akv secret --help
 ```
 
+### Managing keys
+
+You can create, get, edit, and list keys e.g.,
+
+```bash
+akv key list --vault https://my-vault.vault.azure.net
+```
+
+### Managing certificates
+
+You can create, get, edit, and list certificates, as well as get and edit certificate policies e.g.,
+
+```bash
+akv certificate list --vault https://my-vault.vault.azure.net
+```
+
+To read and edit the certificate policy for the next rotation:
+
+```bash
+akv certificate get-policy --name my-cert --vault https://my-vault.vault.azure.net
+akv certificate edit-policy --name my-cert --vault https://my-vault.vault.azure.net \
+    --reuse-key --validity 3
+```
+
 ## Background
 
 Though still a work in progress, inspiration was derived from the [1Password CLI].

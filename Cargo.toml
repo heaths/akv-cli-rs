@@ -1,6 +1,6 @@
 [package]
 name = "akv-cli"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2021"
 description = """
 The Azure Key Vault CLI (unofficial) can read secrets from Key Vault,
@@ -14,7 +14,7 @@ rust-version = "1.85"
 
 [features]
 default = ["color"]
-color = ["colored_json", "yansi"]
+color = ["clap/color", "colored_json", "yansi"]
 
 [dependencies]
 async-lock = "3.4.0"
@@ -25,7 +25,16 @@ azure_identity = "0.29.0"
 azure_security_keyvault_certificates = "0.7.0"
 azure_security_keyvault_keys = "0.8.0"
 azure_security_keyvault_secrets = "0.8.0"
-clap = { version = "4.5.28", features = ["derive", "env", "string"] }
+clap = { version = "4.5.28", default-features = false, features = [
+    "derive",
+    "env",
+    "error-context",
+    "help",
+    "std",
+    "string",
+    "suggestions",
+    "usage",
+] }
 clap_complete = "4.5.46"
 colored_json = { version = "5.0.0", optional = true }
 dotazure = "0.2.0"
