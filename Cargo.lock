@@ -30,8 +30,6 @@ dependencies = [
 name = "akv-cli"
 version = "0.5.1"
 dependencies = [
- "anstream",
- "anstyle",
  "async-lock",
  "async-stream",
  "async-trait",
@@ -43,6 +41,7 @@ dependencies = [
  "azure_storage_blob",
  "clap",
  "clap_complete",
+ "colored_json",
  "criterion",
  "dotazure",
  "dotenvy",
@@ -61,6 +60,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "wildcard",
+ "yansi",
 ]
 
 [[package]]
@@ -465,6 +465,17 @@ name = "colorchoice"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
+
+[[package]]
+name = "colored_json"
+version = "5.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e35980a1b846f8e3e359fd18099172a0857140ba9230affc4f71348081e039b6"
+dependencies = [
+ "serde",
+ "serde_json",
+ "yansi",
+]
 
 [[package]]
 name = "concurrent-queue"
@@ -2769,6 +2780,15 @@ name = "writeable"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea2f10b9bb0928dfb1b42b65e1f9e36f7f54dbdf08457afefb38afcdec4fa2bb"
+
+[[package]]
+name = "yansi"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
+dependencies = [
+ "is-terminal",
+]
 
 [[package]]
 name = "yoke"

@@ -13,7 +13,8 @@ license = "MIT"
 rust-version = "1.85"
 
 [features]
-debug = ["azure_core/debug"]
+default = ["color"]
+color = ["colored_json", "yansi"]
 
 [dependencies]
 async-lock = "3.4.0"
@@ -26,6 +27,7 @@ azure_security_keyvault_keys = "0.8.0"
 azure_security_keyvault_secrets = "0.8.0"
 clap = { version = "4.5.28", features = ["derive", "env", "string"] }
 clap_complete = "4.5.46"
+colored_json = { version = "5.0.0", optional = true }
 dotazure = "0.2.0"
 dotenvy = "0.15.7"
 futures = "0.3.31"
@@ -49,10 +51,9 @@ tracing-subscriber = { version = "0.3.20", features = [
     "local-time",
 ] }
 url = "2.5.4"
+yansi = { version = "1.0.1", features = ["detect-tty"], optional = true }
 
 [dev-dependencies]
-anstream = "0.6.18"
-anstyle = "1.0.10"
 async-trait = "0.1.88"
 azure_storage_blob = "0.6.0"
 criterion = "0.6.0"
@@ -66,3 +67,10 @@ strip = "debuginfo"
 [[bench]]
 name = "jwe"
 harness = false
+
+[[example]]
+name = "printenv"
+required-features = ["color"]
+
+[package.metadata.docs.rs]
+all-features = true

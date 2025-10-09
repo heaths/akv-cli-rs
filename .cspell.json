@@ -29,8 +29,6 @@
     {
       "name": "crates",
       "words": [
-        "anstream",
-        "anstyle",
         "dotazure",
         "dotenvy",
         "indicatif",
@@ -38,9 +36,9 @@
         "reqwest",
         "prettytable",
         "serde",
-        "timeago"
-      ],
-      "noSuggest": true
+        "timeago",
+        "yansi"
+      ]
     }
   ],
   "overrides": [

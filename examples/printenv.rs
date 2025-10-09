@@ -1,7 +1,6 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use anstyle::{AnsiColor, Style};
 use clap::{builder::TypedValueParser, ColorChoice, Parser};
 use std::{
     env,
@@ -10,9 +9,7 @@ use std::{
 };
 use tokio::time::sleep;
 use wildcard::Wildcard;
-
-const GREEN: Style = Style::new().fg_color(Some(anstyle::Color::Ansi(AnsiColor::Green)));
-const RED: Style = Style::new().fg_color(Some(anstyle::Color::Ansi(AnsiColor::Red)));
+use yansi::{Condition, Paint as _, Style};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -39,9 +36,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Interleave stdout and stderr for testing purposes.
     let padding = vars.len().to_string().len();
-    let mut stdout = anstream::AutoStream::new(io::stdout(), args.color());
-    let mut stderr = anstream::AutoStream::new(io::stderr(), args.color());
 
+    let green: Style = Style::new()
+        .green()
+        .whenever(args.color(Condition::STDOUT_IS_TTY));
+    let red: Style = Style::new()
+        .red()
+        .whenever(args.color(Condition::STDERR_IS_TTY));
+
+    let mut stdout = io::stdout().lock();
+    let mut stderr = io::stderr().lock();
     for (i, (key, value)) in vars.into_iter().enumerate() {
         if let Some(delay) = args.delay {
             sleep(Duration::from_millis(delay)).await;
@@ -49,8 +53,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let line = format!("{key}={value}");
         match i % 2 {
-            0 => writeln!(stdout, "{GREEN}stdout {:>padding$}{GREEN:#}: {line}", i + 1)?,
-            _ => writeln!(stderr, "{RED}stderr {:>padding$}{RED:#}: {line}", i + 1)?,
+            0 => writeln!(
+                stdout,
+                "{}: {line}",
+                format!("stdout {:>padding$}", i + 1).paint(green)
+            )?,
+            _ => writeln!(
+                stderr,
+                "{}: {line}",
+                format!("stderr {:>padding$}", i + 1).paint(red)
+            )?,
         }
     }
 
@@ -77,11 +89,11 @@ struct Args {
 }
 
 impl Args {
-    fn color(&self) -> anstream::ColorChoice {
+    fn color(&self, is_tty: Condition) -> Condition {
         match self.color {
-            ColorChoice::Always => anstream::ColorChoice::Always,
-            ColorChoice::Auto => anstream::ColorChoice::Auto,
-            ColorChoice::Never => anstream::ColorChoice::Never,
+            ColorChoice::Always => Condition::ALWAYS,
+            ColorChoice::Auto => is_tty,
+            ColorChoice::Never => Condition::NEVER,
         }
     }
 

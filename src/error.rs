@@ -192,6 +192,12 @@ impl From<openssl::error::ErrorStack> for Error {
     }
 }
 
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
+        Self::new(ErrorKind::Io, error)
+    }
+}
+
 impl From<url::ParseError> for Error {
     fn from(error: url::ParseError) -> Self {
         Self::new(ErrorKind::InvalidData, error)
