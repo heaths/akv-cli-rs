@@ -1,6 +1,8 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+//! JSON Web Encryption types.
+
 use crate::{
     jose::{Algorithm, Encode, EncryptionAlgorithm, Header, Set, Type, Unset},
     Error, ErrorKind, Result, ResultExt as _,
@@ -24,10 +26,12 @@ pub struct Jwe {
 }
 
 impl Jwe {
+    /// Gets a JWE encryptor.
     pub fn encryptor() -> JweEncryptor<Unset, Unset> {
         JweEncryptor::default()
     }
 
+    /// Decrypts a JWE.
     pub async fn decrypt<F>(self, unwrap_key: F) -> Result<Bytes>
     where
         F: AsyncFn(&str, &Algorithm, &[u8]) -> Result<WrapKeyResult>,
@@ -67,6 +71,7 @@ impl Jwe {
         Ok(plaintext)
     }
 
+    /// Gets the key identifier.
     pub fn kid(&self) -> Option<&str> {
         self.header.kid.as_deref()
     }
@@ -155,6 +160,9 @@ impl FromStr for Jwe {
     }
 }
 
+/// A JWE encryptor.
+///
+/// Only JWEs with key identifiers are supported, specifically from Key Vault.
 #[derive(Debug)]
 pub struct JweEncryptor<C, K> {
     alg: Option<Algorithm>,
@@ -167,6 +175,7 @@ pub struct JweEncryptor<C, K> {
 }
 
 impl<C, K> JweEncryptor<C, K> {
+    /// Sets the JWE [`Algorithm`].
     pub fn alg(self, alg: Algorithm) -> Self {
         Self {
             alg: Some(alg),
@@ -174,6 +183,7 @@ impl<C, K> JweEncryptor<C, K> {
         }
     }
 
+    /// Sets the JWE [`EncryptionAlgorithm`].
     pub fn enc(self, enc: EncryptionAlgorithm) -> Self {
         Self {
             enc: Some(enc),
@@ -181,6 +191,7 @@ impl<C, K> JweEncryptor<C, K> {
         }
     }
 
+    /// Sets the JWE content encryption key.
     pub fn cek(self, cek: &[u8]) -> Self {
         Self {
             cek: Some(Bytes::copy_from_slice(cek)),
@@ -188,6 +199,7 @@ impl<C, K> JweEncryptor<C, K> {
         }
     }
 
+    /// Sets the JWE initialization vector.
     pub fn iv(self, iv: &[u8]) -> Self {
         Self {
             iv: Some(Bytes::copy_from_slice(iv)),
@@ -197,6 +209,7 @@ impl<C, K> JweEncryptor<C, K> {
 }
 
 impl<K> JweEncryptor<Unset, K> {
+    /// Sets the plaintext data.
     pub fn plaintext(self, plaintext: &[u8]) -> JweEncryptor<Set, K> {
         JweEncryptor::<Set, K> {
             plaintext: Some(Bytes::copy_from_slice(plaintext)),
@@ -209,12 +222,14 @@ impl<K> JweEncryptor<Unset, K> {
         }
     }
 
+    /// Sets the plaintext encoded as a string.
     pub fn plaintext_str(self, plaintext: impl AsRef<str>) -> JweEncryptor<Set, K> {
         JweEncryptor::plaintext(self, plaintext.as_ref().as_bytes())
     }
 }
 
 impl<C> JweEncryptor<C, Unset> {
+    /// Sets the JWE key identifier.
     pub fn kid(self, kid: impl Into<String>) -> JweEncryptor<C, Set> {
         JweEncryptor::<C, Set> {
             kid: Some(kid.into()),
@@ -229,6 +244,7 @@ impl<C> JweEncryptor<C, Unset> {
 }
 
 impl JweEncryptor<Set, Set> {
+    /// Encrypts the JWE.
     pub async fn encrypt<F>(self, wrap_key: F) -> Result<Jwe>
     where
         F: AsyncFn(&str, &Algorithm, &[u8]) -> Result<WrapKeyResult>,
@@ -369,9 +385,13 @@ impl TryFrom<&Algorithm> for azure_security_keyvault_keys::models::EncryptionAlg
     }
 }
 
+/// Result for a key wrap operation.
 #[derive(Debug)]
 pub struct WrapKeyResult {
+    /// The key identifier.
     pub kid: String,
+
+    /// The content encryption key.
     pub cek: Bytes,
 }
 

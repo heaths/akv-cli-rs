@@ -20,6 +20,7 @@
     "lldb",
     "oaep",
     "repr",
+    "rustdoc",
     "rustlang",
     "rustup",
     "symm",

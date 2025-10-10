@@ -1,6 +1,11 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+// cspell:ignore docsrs
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![deny(missing_docs)]
+#![doc = include_str!("../README.md")]
+
 pub mod cache;
 #[cfg(feature = "color")]
 pub mod color;
