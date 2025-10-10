@@ -274,7 +274,7 @@ impl Commands {
         current.record("vault", vault.as_str());
         current.record("name", name);
 
-        let client = CertificateClient::new(vault.as_str(), credential()?, None)?;
+        let client = CertificateClient::new(vault.as_str(), credential(), None)?;
 
         let certificate_attributes = CertificateAttributes {
             enabled: *enabled,
@@ -372,7 +372,7 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = CertificateClient::new(&vault, credential()?, None)?;
+        let client = CertificateClient::new(&vault, credential(), None)?;
 
         let certificate_attributes = CertificateAttributes {
             enabled: *enabled,
@@ -428,7 +428,7 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = CertificateClient::new(&vault, credential()?, None)?;
+        let client = CertificateClient::new(&vault, credential(), None)?;
 
         let key_properties = KeyProperties {
             key_type: r#type.map(Into::into),
@@ -490,7 +490,7 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = CertificateClient::new(&vault, credential()?, None)?;
+        let client = CertificateClient::new(&vault, credential(), None)?;
         let certificate = client
             .get_certificate(
                 &name,
@@ -516,7 +516,7 @@ impl Commands {
         current.record("vault", &*vault);
         current.record("name", &*name);
 
-        let client = CertificateClient::new(&vault, credential()?, None)?;
+        let client = CertificateClient::new(&vault, credential(), None)?;
         let policy = client
             .get_certificate_policy(&name, None)
             .await?
@@ -533,7 +533,7 @@ impl Commands {
 
         Span::current().record("vault", vault.as_str());
 
-        let client = CertificateClient::new(vault.as_str(), credential()?, None)?;
+        let client = CertificateClient::new(vault.as_str(), credential(), None)?;
         let mut certificates: Vec<CertificateProperties> = client
             .list_certificate_properties(None)?
             .try_collect()
@@ -613,7 +613,7 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = CertificateClient::new(&vault, credential()?, None)?;
+        let client = CertificateClient::new(&vault, credential(), None)?;
         let mut certificates: Vec<CertificateProperties> = client
             .list_certificate_properties_versions(&name, None)?
             .try_collect()

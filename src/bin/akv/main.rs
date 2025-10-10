@@ -16,8 +16,7 @@ use azure_identity::AzureDeveloperCliCredential;
 use clap::ColorChoice;
 use clap::Parser;
 use commands::Commands;
-use once_cell::sync::OnceCell;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use time::macros::format_description;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{
@@ -95,10 +94,10 @@ impl Args {
     }
 }
 
-static CREDENTIAL: OnceCell<Arc<dyn TokenCredential>> = OnceCell::new();
+static CREDENTIAL: OnceLock<Arc<dyn TokenCredential>> = OnceLock::new();
 
-pub(crate) fn credential() -> Result<Arc<dyn TokenCredential>> {
+pub(crate) fn credential() -> Arc<dyn TokenCredential> {
     CREDENTIAL
-        .get_or_try_init(|| Ok(DeveloperCredential::new(None)))
-        .cloned()
+        .get_or_init(|| DeveloperCredential::new(None))
+        .to_owned()
 }

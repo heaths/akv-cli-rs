@@ -61,7 +61,7 @@ impl Args {
             }
         };
 
-        let credential = credential()?;
+        let credential = credential();
         let cache = ClientCache::<SecretClient>::new();
         if let Some(vault) = self.vault.as_ref() {
             cache
