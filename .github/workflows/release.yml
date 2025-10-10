@@ -50,13 +50,12 @@ jobs:
         - ubuntu-22.04
         - ubuntu-22.04-arm
         - windows-2022
-        # https://github.com/actions/partner-runner-images/issues/77
-        # - windows-11-arm
+        - windows-11-arm
         include:
         - os: windows-2022
           extension: '.exe'
-        # - os: windows-11-arm
-        #   extension: '.exe'
+        - os: windows-11-arm
+          extension: '.exe'
     needs: release
     steps:
     - name: Checkout
