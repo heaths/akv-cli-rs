@@ -6,9 +6,7 @@
 mod commands;
 mod pty;
 
-use akv_cli::{credentials::DeveloperCredential, ColorMode, Result};
-#[cfg(debug_assertions)]
-use akv_cli::{ErrorKind, ResultExt as _};
+use akv_cli::{credentials::DeveloperCredential, ColorMode, ErrorKind, Result, ResultExt as _};
 use azure_core::credentials::TokenCredential;
 #[cfg(debug_assertions)]
 use azure_identity::AzureDeveloperCliCredential;
