@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: The tag to release e.g., "v0.6.0".
+        description: The tag to release e.g., v0.1.0
         required: true
         type: string
 
@@ -15,34 +15,29 @@ defaults:
   run:
     shell: bash
 
+env:
+  BREW_FORMULA: akv
+  BREW_TAP: heaths/tap
+
 jobs:
   bump-formula:
     runs-on: ubuntu-latest
     steps:
-    - name: Get tarball URL
-      id: tarballUrl
-      run: |
-        TARBALL_URL=$(gh release view '$TAG' --json tarballUrl --template '{{ .tarballUrl }}')
-        echo "TARBALL_URL=$TARBALL_URL" | tee -a "$GITHUB_OUTPUT"
+    - name: Get user info
+      id: user
+      run: gh api 'users/${{ github.actor }}' --template 'name="{{ .name }}"{{"\n"}}email="{{ .email }}"{{"\n"}}' | tee -a "$GITHUB_OUTPUT"
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TAG: ${{ inputs.tag || github.ref }}
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        repository: heaths/homebrew-tap
-        token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Set up Homebrew
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential curl file git
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >>~/.bash_profile
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        GH_TOKEN: ${{ github.token }}
     - name: Run brew bump-formula-pr
+      # According to https://github.com/actions/runner-images?tab=readme-ov-file#available-images,
+      # Linuxbrew is already installed on ubuntu-latest.
       run: |
-        brew tap heaths/tap
-        brew bump-formula-pr --url '$TARBALL_URL' heaths/tap/akv
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        brew tap '${{ env.BREW_TAP }}'
+        brew bump-formula-pr --no-browse --url '${{ env.TARBALL_URL }}' '${{ env.BREW_TAP }}/${{ env.BREW_FORMULA }}'
       env:
-        HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TARBALL_URL: ${{ steps.tarballUrl.outputs.TARBALL_URL }}
+        HOMEBREW_GIT_NAME: ${{ steps.user.outputs.name }}
+        HOMEBREW_GIT_EMAIL: ${{ steps.user.outputs.email }}
+        # https://github.com/settings/tokens/new?scopes=repo&description=Homebrew
+        HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+        TARBALL_URL: ${{ github.server_url }}/${{ github.repository }}/archive/refs/tags/${{ inputs.tag || github.ref }}.tar.gz
