@@ -4,7 +4,7 @@
 use super::{elapsed, VAULT_ENV_NAME};
 use crate::{
     commands::{map_tags, AttributeArgs, IsDefault},
-    credential,
+    credential, TableExt,
 };
 use akv_cli::{
     parsing::{parse_key_value, parse_key_value_opt},
@@ -130,13 +130,13 @@ pub enum Commands {
 }
 
 impl Commands {
-    pub async fn handle(&self) -> Result<()> {
+    pub async fn handle(&self, global_args: &crate::Args) -> Result<()> {
         match &self {
             Commands::Create { .. } => self.create().await,
             Commands::Edit { .. } => self.edit().await,
             Commands::Get { .. } => self.get().await,
-            Commands::List { .. } => self.list().await,
-            Commands::ListVersions { .. } => self.list_versions().await,
+            Commands::List { .. } => self.list(global_args).await,
+            Commands::ListVersions { .. } => self.list_versions(global_args).await,
         }
     }
 
@@ -267,7 +267,7 @@ impl Commands {
     }
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault), err)]
-    async fn list(&self) -> Result<()> {
+    async fn list(&self, global_args: &crate::Args) -> Result<()> {
         let Commands::List {
             vault,
             long,
@@ -334,13 +334,13 @@ impl Commands {
         }
 
         // cspell:ignore printstd
-        table.printstd();
+        table.print_color_conditionally(global_args.color())?;
 
         Ok(())
     }
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
-    async fn list_versions(&self) -> Result<()> {
+    async fn list_versions(&self, global_args: &crate::Args) -> Result<()> {
         let Commands::ListVersions {
             id,
             name,
@@ -413,7 +413,7 @@ impl Commands {
         }
 
         // cspell:ignore printstd
-        table.printstd();
+        table.print_color_conditionally(global_args.color())?;
 
         Ok(())
     }

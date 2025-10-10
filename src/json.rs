@@ -3,6 +3,7 @@
 
 #[cfg(feature = "color")]
 use crate::color;
+use crate::ColorMode;
 use serde::Serialize;
 use std::io::{stdout, IsTerminal as _};
 
@@ -55,14 +56,6 @@ pub fn print<T: Serialize>(
             Ok(())
         }
     }
-}
-
-#[derive(Debug, Default)]
-pub enum ColorMode {
-    #[default]
-    Auto,
-    Always,
-    Never,
 }
 
 #[cfg(feature = "color")]
