@@ -6,7 +6,7 @@
 mod commands;
 mod pty;
 
-use akv_cli::{credentials::DeveloperCredential, json::ColorMode, Result};
+use akv_cli::{credentials::DeveloperCredential, ColorMode, Result};
 #[cfg(debug_assertions)]
 use akv_cli::{ErrorKind, ResultExt as _};
 use azure_core::credentials::TokenCredential;
@@ -96,8 +96,40 @@ impl Args {
 
 static CREDENTIAL: OnceLock<Arc<dyn TokenCredential>> = OnceLock::new();
 
-pub(crate) fn credential() -> Arc<dyn TokenCredential> {
+fn credential() -> Arc<dyn TokenCredential> {
     CREDENTIAL
         .get_or_init(|| DeveloperCredential::new(None))
         .to_owned()
+}
+
+fn color(#[allow(unused_variables)] mode: ColorMode) -> bool {
+    #[cfg(feature = "color")]
+    {
+        use yansi::Condition;
+
+        match mode {
+            ColorMode::Always => true,
+            ColorMode::Auto => Condition::tty_and_color(),
+            ColorMode::Never => false,
+        }
+    }
+
+    #[cfg(not(feature = "color"))]
+    false
+}
+
+trait TableExt {
+    fn print_color_conditionally(&self, mode: ColorMode) -> crate::Result<usize>;
+}
+
+impl TableExt for prettytable::Table {
+    fn print_color_conditionally(&self, mode: ColorMode) -> crate::Result<usize> {
+        if color(mode) {
+            self.print_tty(mode == ColorMode::Always)
+                .with_kind(ErrorKind::Io)
+        } else {
+            let mut stdout = std::io::stdout().lock();
+            self.print(&mut stdout).with_kind(ErrorKind::Io)
+        }
+    }
 }

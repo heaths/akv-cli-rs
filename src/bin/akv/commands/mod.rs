@@ -60,8 +60,8 @@ pub enum Commands {
 impl Commands {
     pub async fn handle(&self, global_args: &crate::Args) -> Result<()> {
         match self {
-            Commands::Secret(command) => command.handle().await,
-            Commands::Key(command) => command.handle().await,
+            Commands::Secret(command) => command.handle(global_args).await,
+            Commands::Key(command) => command.handle(global_args).await,
             Commands::Certificate(command) => command.handle(global_args).await,
             Commands::Inject(args) => args.inject().await,
             Commands::Read(args) => args.read().await,
