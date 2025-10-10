@@ -1,0 +1,48 @@
+name: brew
+
+on:
+  release:
+    types:
+    - released
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag to release e.g., "v0.6.0".
+        required: true
+        type: string
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  bump-formula:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get tarball URL
+      id: tarballUrl
+      run: |
+        TARBALL_URL=$(gh release view '$TAG' --json tarballUrl --template '{{ .tarballUrl }}')
+        echo "TARBALL_URL=$TARBALL_URL" | tee -a "$GITHUB_OUTPUT"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG: ${{ inputs.tag || github.ref }}
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        repository: heaths/homebrew-tap
+        token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Set up Homebrew
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential curl file git
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >>~/.bash_profile
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    - name: Run brew bump-formula-pr
+      run: |
+        brew tap heaths/tap
+        brew bump-formula-pr --version '$TARBALL_URL' heaths/tap/akv
+      env:
+        HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TARBALL_URL: ${{ steps.tarballUrl.outputs.TARBALL_URL }}
