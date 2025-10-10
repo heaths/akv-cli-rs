@@ -178,7 +178,7 @@ impl Commands {
         current.record("vault", vault.as_str());
         current.record("name", name);
 
-        let client = KeyClient::new(vault.as_str(), credential()?, None)?;
+        let client = KeyClient::new(vault.as_str(), credential(), None)?;
 
         let key_attributes = KeyAttributes {
             enabled: *enabled,
@@ -229,7 +229,7 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = KeyClient::new(&vault, credential()?, None)?;
+        let client = KeyClient::new(&vault, credential(), None)?;
 
         let key_attributes = KeyAttributes {
             enabled: *enabled,
@@ -271,7 +271,7 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = KeyClient::new(&vault, credential()?, None)?;
+        let client = KeyClient::new(&vault, credential(), None)?;
         let key = client
             .get_key(
                 &name,
@@ -299,7 +299,7 @@ impl Commands {
 
         Span::current().record("vault", vault.as_str());
 
-        let client = KeyClient::new(vault.as_str(), credential()?, None)?;
+        let client = KeyClient::new(vault.as_str(), credential(), None)?;
         let mut keys: Vec<KeyProperties> = client
             .list_key_properties(None)?
             .try_filter(|p| future::ready(*include_managed || !p.managed.unwrap_or_default()))
@@ -374,7 +374,7 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = KeyClient::new(&vault, credential()?, None)?;
+        let client = KeyClient::new(&vault, credential(), None)?;
         let mut keys: Vec<KeyProperties> = client
             .list_key_properties_versions(&name, None)?
             .try_collect()

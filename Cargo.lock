@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "akv-cli"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-lock",
  "async-stream",
@@ -48,7 +48,6 @@ dependencies = [
  "futures",
  "indicatif",
  "libc",
- "once_cell",
  "openssl",
  "prettytable-rs",
  "serde",

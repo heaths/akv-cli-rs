@@ -52,7 +52,7 @@ impl Args {
             dotenvy::from_path_override(path)?;
         }
 
-        let credential = credential()?;
+        let credential = credential();
         let key_client_cache = ClientCache::new();
         let secret_client_cache = ClientCache::new();
         let secrets = Arc::new(Mutex::new(HashMap::<String, String>::new()));
