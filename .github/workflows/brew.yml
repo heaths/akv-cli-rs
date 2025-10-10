@@ -22,33 +22,22 @@ env:
 jobs:
   bump-formula:
     runs-on: ubuntu-latest
-    # According to https://github.com/actions/runner-images?tab=readme-ov-file#available-images,
-    # Linuxbrew is already installed on ubuntu-latest.
     steps:
     - name: Get user info
       id: user
-      run: gh api 'users/${{ github.actor }}' --template 'NAME="{{ .name }}"{{"\n"}}EMAIL="{{ .email }}"{{"\n"}}' | tee -a "$GITHUB_OUTPUT"
+      run: gh api 'users/${{ github.actor }}' --template 'name="{{ .name }}"{{"\n"}}email="{{ .email }}"{{"\n"}}' | tee -a "$GITHUB_OUTPUT"
       env:
         GH_TOKEN: ${{ github.token }}
-    - name: Get brew info
-      id: brew
-      run: |
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-        echo "ROOT=$(brew --prefix)" | tee -a "$GITHUB_OUTPUT"
-        VERSION="$(brew --version)" && echo "VERSION=${VERSION#'Homebrew '}" | tee -a "$GITHUB_OUTPUT"
-    - name: Cache brew bundles
-      uses: actions/cache@v4
-      with:
-        path: ${{ steps.brew.outputs.ROOT }}/Library/Homebrew/vendor/bundle/
-        key: ${{ runner.os }}-${{ runner.arch }}-brew-${{ steps.brew.outputs.VERSION }}
     - name: Run brew bump-formula-pr
+      # According to https://github.com/actions/runner-images?tab=readme-ov-file#available-images,
+      # Linuxbrew is already installed on ubuntu-latest.
       run: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
         brew tap '${{ env.BREW_TAP }}'
         brew bump-formula-pr --no-browse --url '${{ env.TARBALL_URL }}' '${{ env.BREW_TAP }}/${{ env.BREW_FORMULA }}'
       env:
-        HOMEBREW_GIT_NAME: ${{ steps.user.outputs.NAME }}
-        HOMEBREW_GIT_EMAIL: ${{ steps.user.outputs.EMAIL }}
+        HOMEBREW_GIT_NAME: ${{ steps.user.outputs.name }}
+        HOMEBREW_GIT_EMAIL: ${{ steps.user.outputs.email }}
         # https://github.com/settings/tokens/new?scopes=repo&description=Homebrew
         HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
         TARBALL_URL: ${{ github.server_url }}/${{ github.repository }}/archive/refs/tags/${{ inputs.tag || github.ref }}.tar.gz
