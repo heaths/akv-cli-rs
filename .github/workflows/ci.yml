@@ -51,7 +51,7 @@ jobs:
         echo "OPENSSL_DIR=C:\Program Files\OpenSSL" >> $GITHUB_ENV
         echo "OPENSSL_LIB_DIR=C:\Program Files\OpenSSL\lib\VC\x64\MTd" >> $GITHUB_ENV
     - name: Test
-      run: cargo test --all-features --workspace
+      run: cargo test --all-features --workspace ${{ inputs.release && '--release' || '' }}
 
   analyze:
     runs-on: ubuntu-latest
