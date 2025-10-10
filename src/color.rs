@@ -1,6 +1,8 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+//! Color configuration when feature `color` is enabled (default).
+
 use colored_json::Styler;
 use std::env;
 use yansi::{Attribute, Color};
@@ -10,6 +12,9 @@ use yansi::{Attribute, Color};
 pub struct Config([u16; 8]);
 
 impl Config {
+    /// Loads the `Config` from the environment.
+    ///
+    /// Currently only parses the [`JQ_COLORS`](https://jqlang.org/manual/#colors) environment variable.
     pub fn from_env() -> Self {
         env::var("JQ_COLORS")
             .ok()

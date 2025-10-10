@@ -75,6 +75,9 @@ opt-level = "s"
 panic = "abort"
 strip = "debuginfo"
 
+[lints.rustdoc]
+bare_urls = "allow"
+
 [[bench]]
 name = "jwe"
 harness = false

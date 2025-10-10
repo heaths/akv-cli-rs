@@ -1,18 +1,27 @@
 // Copyright 2024 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+//! Crate errors.
+
 use std::{
     borrow::{Borrow, Cow},
     convert::Infallible,
     fmt,
 };
 
+/// Crate-specific `Result`.
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// The kind of [`Error`].
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ErrorKind {
+    /// Invalid data.
     InvalidData,
+
+    /// I/O error.
     Io,
+
+    /// Other error.
     Other,
 }
 
@@ -27,6 +36,7 @@ impl fmt::Display for ErrorKind {
     }
 }
 
+/// Crate-specific `Error`.
 #[derive(Debug)]
 pub struct Error {
     repr: Repr,
@@ -66,6 +76,7 @@ impl Error {
         }
     }
 
+    /// Create an `Error` with a message.
     #[must_use]
     pub fn with_message<C>(kind: ErrorKind, message: C) -> Self
     where
@@ -76,6 +87,7 @@ impl Error {
         }
     }
 
+    /// Create an `Error` with a function that returns a message.
     #[must_use]
     pub fn with_message_fn<F, C>(kind: ErrorKind, message: F) -> Self
     where
@@ -86,6 +98,7 @@ impl Error {
         Self::with_message(kind, message())
     }
 
+    /// Create an `Error` that wraps another [`Error`](std::error::Error) and a message.
     #[must_use]
     pub fn with_error<E, C>(kind: ErrorKind, error: E, message: C) -> Self
     where
@@ -104,6 +117,7 @@ impl Error {
     }
 
     #[must_use]
+    /// Create an `Error` that wraps another [`Error`](std::error::Error) and a function that returns a message.
     pub fn with_error_fn<E, F, C>(kind: ErrorKind, error: E, message: F) -> Self
     where
         E: Into<Box<dyn std::error::Error + Send + Sync>>,
@@ -218,14 +232,18 @@ struct Custom {
     error: Box<dyn std::error::Error + Send + Sync>,
 }
 
+/// Extension methods for [`Result`](std::result::Result)s.
 pub trait ResultExt<T>: private::Sealed {
+    /// Wrap an [`Error`](std::error::Error) with an [`ErrorKind`].
     fn with_kind(self, kind: ErrorKind) -> Result<T>;
 
+    /// Wrap an [`Error`](std::error::Error) with an [`ErrorKind`] and message.
     fn with_context<C>(self, kind: ErrorKind, message: C) -> Result<T>
     where
         Self: Sized,
         C: Into<Cow<'static, str>>;
 
+    /// Wrap an [`Error`](std::error::Error) with an [`ErrorKind`] and a function that returns a message.
     fn with_context_fn<F, C>(self, kind: ErrorKind, f: F) -> Result<T>
     where
         Self: Sized,

@@ -3,6 +3,8 @@
 
 #![allow(non_camel_case_types)]
 
+//! Basic JSON Web Encryption support.
+
 mod jwe;
 
 use std::fmt;
@@ -16,11 +18,15 @@ use clap::ValueEnum;
 pub use jwe::{Jwe, JweEncryptor, WrapKeyResult};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+/// Implemented by types that can encode and decode data.
 pub trait Encode
 where
     Self: Sized,
 {
+    /// Decode data from a string.
     fn decode(value: &str) -> Result<Self>;
+
+    /// Encode data to a string.
     fn encode(&self) -> Result<String>;
 }
 
@@ -58,10 +64,14 @@ pub struct Header {
     pub typ: Type,
 }
 
+/// The type of JWE.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Type {
+    /// JSON Web Encryption
     JWE,
+
+    /// Other type
     #[serde(untagged)]
     Other(String),
 }
@@ -75,6 +85,7 @@ impl fmt::Display for Type {
     }
 }
 
+/// Supported JWE algorithms
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, ValueEnum)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Algorithm {
@@ -90,28 +101,41 @@ pub enum Algorithm {
     // PS512,
 
     // JWE algorithms
+    /// RSA1_5
     #[serde(rename = "RSA1_5")]
     RSA1_5,
+
+    /// RSA-OAEP
     #[serde(rename = "RSA-OAEP")]
     RSA_OAEP,
+
+    /// RSA-OAEP-256
     #[serde(rename = "RSA-OAEP-256")]
     RSA_OAEP_256,
 
+    /// Other algorithm
     #[serde(untagged)]
     #[value(skip)]
     Other(String),
 }
 
+/// Supported JWE encryption algorithms.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, ValueEnum)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum EncryptionAlgorithm {
     // A128CBC_HS256,
     // A192CBC_HS384,
     // A256CBC_HS512,
+    /// A128GCM
     A128GCM,
+
+    /// A192GCM
     A192GCM,
+
+    /// A256GCM
     A256GCM,
 
+    /// Other JWE encryption algorithm
     #[serde(untagged)]
     #[value(skip)]
     Other(String),

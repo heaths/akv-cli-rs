@@ -1,6 +1,8 @@
 // Copyright 2024 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+//! Custom token credential implementations.
+
 use async_lock::RwLock;
 use azure_core::{
     credentials::{AccessToken, TokenCredential, TokenRequestOptions},
@@ -13,6 +15,7 @@ use azure_identity::{
 use std::sync::{Arc, LazyLock};
 use tracing::Instrument;
 
+/// Chains an [`AzureDeveloperCliCredential`] and an [`AzureCliCredential`].
 #[derive(Debug)]
 pub struct DeveloperCredential {
     options: Option<DeveloperCredentialOptions>,
@@ -20,6 +23,7 @@ pub struct DeveloperCredential {
 }
 
 impl DeveloperCredential {
+    /// Creates a new `DeveloperCredential`.
     pub fn new(options: Option<DeveloperCredentialOptions>) -> Arc<Self> {
         Arc::new(Self {
             options,
@@ -83,10 +87,16 @@ impl TokenCredential for DeveloperCredential {
     }
 }
 
+/// Options for [`DeveloperCredential::new`].
 #[derive(Debug, Default)]
 pub struct DeveloperCredentialOptions {
+    /// The Azure subscription ID.
     pub subscription: Option<String>,
+
+    /// The tenant ID.
     pub tenant_id: Option<String>,
+
+    /// Additional tenant IDs that can authenticate.
     pub additionally_allowed_tenants: Vec<String>,
 }
 

@@ -1,12 +1,15 @@
 // Copyright 2024 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+//! Cache clients based on the vault URL.
+
 use azure_security_keyvault_keys::KeyClient;
 use azure_security_keyvault_secrets::SecretClient;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 use url::Url;
 
+/// Caches Key Vault clients based on the vault URL.
 #[derive(Default)]
 pub struct ClientCache<T> {
     // Mutex should be fast enough for our needs of a CLI.
@@ -14,12 +17,14 @@ pub struct ClientCache<T> {
 }
 
 impl<T: TypeName> ClientCache<T> {
+    /// Create a new `ClientCache`.
     pub fn new() -> Self {
         Self {
             cache: Default::default(),
         }
     }
 
+    /// Gets, or creates and caches, a Key Vault client based on the `endpoint`.
     pub async fn get<F>(&self, endpoint: impl AsRef<str>, f: F) -> crate::Result<Arc<T>>
     where
         F: FnOnce(&str) -> azure_core::Result<T>,
@@ -48,7 +53,9 @@ impl<T> Clone for ClientCache<T> {
     }
 }
 
+/// Gets a friendly name of the implementing type.
 pub trait TypeName {
+    /// The friendly name of the implementing type.
     fn type_name() -> &'static str;
 }
 

@@ -1,12 +1,15 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+//! JSON utility functions.
+
 #[cfg(feature = "color")]
 use crate::color;
 use crate::ColorMode;
 use serde::Serialize;
 use std::io::{stdout, IsTerminal as _};
 
+/// Print the serializable object to `stdout` with optional formatting and coloring.
 pub fn print<T: Serialize>(
     value: &T,
     #[allow(unused_variables)] mode: ColorMode,

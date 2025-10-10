@@ -1,16 +1,20 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
+//! Parsing utility functions.
+
 use crate::{Error, ErrorKind, Result, ResultExt};
 use futures::future::BoxFuture;
 use std::{borrow::Cow, io, str::FromStr};
 use time::{format_description::well_known, OffsetDateTime};
 
+/// Parse an optional [`OffsetDateTime`] argument from `clap`.
 pub fn parse_date_time_opt(value: &str) -> Result<OffsetDateTime> {
     OffsetDateTime::parse(value, &well_known::Rfc3339)
         .with_context(ErrorKind::InvalidData, "failed to parse date-time")
 }
 
+/// Parse a `key=value` argument from `clap`.
 pub fn parse_key_value<T>(value: &str) -> Result<(String, T)>
 where
     T: FromStr,
@@ -22,6 +26,7 @@ where
     Ok((value[..idx].to_string(), value[idx + 1..].parse()?))
 }
 
+/// Parse an `key=(value)` argument from `clap` where `value` is optional.
 pub fn parse_key_value_opt<T>(value: &str) -> Result<(String, Option<T>)>
 where
     T: FromStr,
