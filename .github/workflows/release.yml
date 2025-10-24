@@ -77,7 +77,16 @@ jobs:
       run: |
         echo "OPENSSL_DIR=C:\Program Files\OpenSSL" >> $GITHUB_ENV
     - name: Build
-      run: cargo build --release --all-features --workspace
+      id: build
+      run: |
+        cargo build --release --all-features --workspace
+        echo "dir=target/release/" | tee -a "$GITHUB_OUTPUT"
+        echo "name=akv${{ matrix.extension }}" | tee -a "$GITHUB_OUTPUT"
+        echo "target=target/release/akv${{ matrix.extension }}" | tee -a "$GITHUB_OUTPUT"
+    - name: Attest executable
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: ${{ steps.build.outputs.target }}
     - name: Package
       id: package
       shell: pwsh
@@ -86,11 +95,11 @@ jobs:
         if ('${{ runner.os }}' -eq 'Windows') {
           $name = "$name.zip"
           $target = "target/release/$name"
-          Compress-Archive -Path target/release/akv${{ matrix.extension }} -DestinationPath $target
+          Compress-Archive -Path ${{ steps.build.outputs.target }} -DestinationPath $target
         } else {
           $name = "$name.tar.gz"
           $target = "target/release/$name"
-          tar czf "$target" -C target/release/ akv${{ matrix.extension }}
+          tar czf "$target" -C ${{ steps.build.outputs.dir }} ${{ steps.build.outputs.name }}
         }
         "name=$name" >> $env:GITHUB_OUTPUT
         "target=$target" >> $env:GITHUB_OUTPUT
