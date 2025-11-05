@@ -1,7 +1,8 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use akv_cli::{credentials::DeveloperCredential, ErrorKind, ResultExt};
+use akv_cli::{ErrorKind, ResultExt};
+use azure_identity::DeveloperToolsCredential;
 use azure_storage_blob::BlobServiceClient;
 use clap::{Parser, Subcommand};
 use futures::TryStreamExt;
@@ -20,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_context(ErrorKind::Other, "$AZURE_STORAGE_SERVICE_ENDPOINT required")?;
 
     // Get a container client.
-    let credential = DeveloperCredential::new(None);
+    let credential = DeveloperToolsCredential::new(None)?;
     let client = BlobServiceClient::new(&endpoint, credential, None)?
         .blob_container_client("examples".into());
 

@@ -2,14 +2,14 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 #![cfg_attr(windows, feature(windows_process_extensions_raw_attribute))]
+#![feature(once_cell_try)]
 
 mod commands;
 mod pty;
 
-use akv_cli::{credentials::DeveloperCredential, ColorMode, ErrorKind, Result, ResultExt as _};
+use akv_cli::{ColorMode, ErrorKind, Result, ResultExt as _};
 use azure_core::credentials::TokenCredential;
-#[cfg(debug_assertions)]
-use azure_identity::AzureDeveloperCliCredential;
+use azure_identity::{AzureDeveloperCliCredential, DeveloperToolsCredential};
 #[cfg(feature = "color")]
 use clap::ColorChoice;
 use clap::Parser;
@@ -24,9 +24,14 @@ use tracing_subscriber::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Load .env files only in debug builds.
-    #[cfg(debug_assertions)]
-    let loaded_env = dotazure::load().with_kind(ErrorKind::Io)?;
+    let loaded_azure_dotenv = dotazure::load().with_kind(ErrorKind::Io)?;
+    if loaded_azure_dotenv {
+        tracing::debug!("loaded environment variables from azd");
+    } else {
+        // Fall back to normal .env lookup.
+        let path = dotenvy::dotenv().with_kind(ErrorKind::Io)?;
+        tracing::debug!("loaded environment variables from {}", path.display());
+    }
 
     let args = Args::parse();
     let verbosity = match args.verbose {
@@ -49,9 +54,8 @@ async fn main() -> Result<()> {
         )))
         .init();
 
-    #[cfg(debug_assertions)]
-    if loaded_env {
-        tracing::debug!("loaded environment variables from azd");
+    // Use only azd credential if we loaded azd .env file for consistent auth.
+    if loaded_azure_dotenv {
         let _ = CREDENTIAL.set(AzureDeveloperCliCredential::new(None)? as Arc<dyn TokenCredential>);
     }
 
@@ -94,10 +98,12 @@ impl Args {
 
 static CREDENTIAL: OnceLock<Arc<dyn TokenCredential>> = OnceLock::new();
 
-fn credential() -> Arc<dyn TokenCredential> {
-    CREDENTIAL
-        .get_or_init(|| DeveloperCredential::new(None))
-        .to_owned()
+fn credential() -> Result<Arc<dyn TokenCredential>> {
+    Ok(CREDENTIAL
+        .get_or_try_init::<_, akv_cli::Error>(|| {
+            Ok(DeveloperToolsCredential::new(None)? as Arc<dyn TokenCredential>)
+        })?
+        .to_owned())
 }
 
 fn color(#[allow(unused_variables)] mode: ColorMode) -> bool {

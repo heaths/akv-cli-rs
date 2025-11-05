@@ -74,7 +74,7 @@ impl Args {
             _ => panic!("inconceivable"),
         };
 
-        let client = KeyClient::new(self.vault.as_str(), credential(), None)?;
+        let client = KeyClient::new(self.vault.as_str(), credential()?, None)?;
         let jwe = Jwe::encryptor()
             .alg(self.algorithm.clone())
             .enc(self.encryption.clone())

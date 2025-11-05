@@ -52,7 +52,7 @@ impl Args {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = SecretClient::new(&vault, credential(), None)?;
+        let client = SecretClient::new(&vault, credential()?, None)?;
         let secret = client
             .get_secret(
                 &name,

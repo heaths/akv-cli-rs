@@ -42,6 +42,9 @@ akv secret list
 akv read --name my-secret
 ```
 
+Environment variables can be read from `.env` files created by the [Azure Developer CLI],
+or from any `.env` file found in ancestor directories.
+
 ### Injecting secrets
 
 You can read a templated file or from stdin to inject secrets into the stream.
@@ -161,5 +164,6 @@ I wanted to make something useful to test our initial prerelease of the Rust cla
 Licensed under the [MIT](LICENSE.txt) license.
 
 [1Password CLI]: https://developer.1password.com/docs/cli/
+[Azure Developer CLI]: https://aka.ms/azure-dev
 [Azure Key Vault]: https://azure.microsoft.com/products/key-vault/
 [Homebrew]: https://brew.sh
