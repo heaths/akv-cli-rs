@@ -65,7 +65,7 @@ impl Args {
                     ..Default::default()
                 };
 
-                let client = KeyClient::new(&vault_url, credential(), None)?;
+                let client = KeyClient::new(&vault_url, credential()?, None)?;
                 client
                     .unwrap_key(
                         &name,

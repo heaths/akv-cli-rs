@@ -9,7 +9,6 @@
 pub mod cache;
 #[cfg(feature = "color")]
 pub mod color;
-pub mod credentials;
 mod error;
 pub mod jose;
 pub mod json;
