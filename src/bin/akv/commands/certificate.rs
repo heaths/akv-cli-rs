@@ -9,7 +9,7 @@ use crate::{
     },
     credential, TableExt,
 };
-use akv_cli::{json, parsing::parse_key_value_opt, Error, ErrorKind, Result};
+use akv_cli::{json, parsing::parse_key_value_opt, Error, Result};
 use azure_core::{http::Url, time::OffsetDateTime, Bytes};
 use azure_security_keyvault_certificates::{
     models::{
@@ -311,29 +311,13 @@ impl Commands {
 
         let spinner = ProgressBar::new_spinner().with_message("Creating certificate...");
         spinner.enable_steady_tick(Duration::from_millis(100));
-        let status = client
-            .begin_create_certificate(name, params.try_into()?, None)?
-            .wait()
+        let certificate = client
+            .create_certificate(name, params.try_into()?, None)?
             .await?
-            .into_body()?;
+            .into_model()?;
         spinner.finish_and_clear();
 
-        if !matches!(status.status, Some(status) if status == "completed") {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!(
-                    "Certificate creation failed: {}",
-                    status.status_details.unwrap_or_default()
-                ),
-            ));
-        }
-        let Some(target) = status.target else {
-            return Err(Error::new(
-                ErrorKind::Other,
-                "Certificate target not available",
-            ));
-        };
-        let ResourceId { name, version, .. } = target.parse()?;
+        let ResourceId { name, version, .. } = certificate.resource_id()?;
         let certificate = client
             .get_certificate(
                 &name,
@@ -343,7 +327,7 @@ impl Commands {
                 }),
             )
             .await?
-            .into_body()?;
+            .into_model()?;
 
         show(&certificate)
     }
@@ -396,7 +380,7 @@ impl Commands {
                 }),
             )
             .await?
-            .into_body()?;
+            .into_model()?;
 
         show(&certificate)
     }
@@ -469,7 +453,7 @@ impl Commands {
                 }),
             )
             .await?
-            .into_body()?;
+            .into_model()?;
 
         if let Some(ref policy) = certificate.policy {
             json::print(policy, global_args.color())?;
@@ -500,7 +484,7 @@ impl Commands {
                 }),
             )
             .await?
-            .into_body()?;
+            .into_model()?;
 
         show(&certificate)
     }
@@ -520,7 +504,7 @@ impl Commands {
         let policy = client
             .get_certificate_policy(&name, None)
             .await?
-            .into_body()?;
+            .into_model()?;
 
         json::print(&policy, global_args.color())
     }

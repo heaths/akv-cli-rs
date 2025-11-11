@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "akv-cli"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "async-lock",
  "async-stream",
@@ -198,9 +198,9 @@ checksum = "ace50bade8e6234aa140d9a2f552bbee1db4d353f69b8217bc503490fc1a9f26"
 
 [[package]]
 name = "azure_core"
-version = "0.29.1"
+version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2abacab36defa6d5b0fc985d0394711d3320f0ae96f8f6d86a995f12b7ffbed2"
+checksum = "f35444aeeb91e29ca82d04dbb8ad904570f837c82093454dc1989c64a33554a7"
 dependencies = [
  "async-lock",
  "async-trait",
@@ -218,22 +218,21 @@ dependencies = [
 
 [[package]]
 name = "azure_core_macros"
-version = "0.3.1"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa7bfabe73737f7a3edea57ab8d3029d71669b513a8e9b603fa6c4baa35d2341"
+checksum = "94f7cc1bbae04cfe11de9e39e2c6dc755947901e0f4e76180ab542b6deb5e15e"
 dependencies = [
  "proc-macro2",
  "quote",
  "syn",
  "tracing",
- "typespec_client_core",
 ]
 
 [[package]]
 name = "azure_identity"
-version = "0.29.0"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5c5b86f84a851bc9200d1a9e771dcb3a99ec4bcf09e320f8a199556a9ed3c54"
+checksum = "0f07bb0ee212021e75c3645e82d078e436b4b4184bde1295e9e81fcbcef923af"
 dependencies = [
  "async-lock",
  "async-trait",
@@ -248,9 +247,9 @@ dependencies = [
 
 [[package]]
 name = "azure_security_keyvault_certificates"
-version = "0.7.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9475d4a0d20bfe8a4977cba358cb0511867a06ee54f838ea4b30b060dcb68a07"
+checksum = "58f62e45cbb2a8d0159b7cfec60547e393eda9bfde37542b65d5a075010c09e8"
 dependencies = [
  "async-trait",
  "azure_core",
@@ -259,14 +258,13 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "typespec_client_core",
 ]
 
 [[package]]
 name = "azure_security_keyvault_keys"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e9e09e45cfa1ee40240f5ff449657abca8a39c57f5549f6d5f0fba8fe294a46"
+checksum = "9985e8285beca2893366dbf04b1e4f8aeb7d63189d1ea56945104ca885ccebc5"
 dependencies = [
  "async-trait",
  "azure_core",
@@ -274,14 +272,13 @@ dependencies = [
  "rustc_version",
  "serde",
  "serde_json",
- "typespec_client_core",
 ]
 
 [[package]]
 name = "azure_security_keyvault_secrets"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0af4b3632c81be998e5151b2231842c59eeaa7e78e5ec7e2dc2c3cc8c7127a59"
+checksum = "237a898c8787e077efe3a03ea056c09ea141675c59947309c6468df8bfbc622d"
 dependencies = [
  "async-trait",
  "azure_core",
@@ -291,14 +288,13 @@ dependencies = [
  "serde_json",
  "time",
  "tokio",
- "typespec_client_core",
 ]
 
 [[package]]
 name = "azure_storage_blob"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7eac4439384310152491cccabdf42d3374b2efeb8c8e732e0ced93dcf9630042"
+checksum = "c38e589153b04af727a736f435d07b48b1a2b17df9353e5d439698fe8b718412"
 dependencies = [
  "async-trait",
  "azure_core",
@@ -1568,9 +1564,9 @@ dependencies = [
 
 [[package]]
 name = "quick-xml"
-version = "0.31.0"
+version = "0.38.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1004a344b30a54e2ee58d66a71b32d2db2feb0a31f9a2d302bf0536f15de2a33"
+checksum = "42a232e7487fc2ef313d96dde7948e7a3c05101870d8985e4fd8d26aedd27b89"
 dependencies = [
  "memchr",
  "serde",
@@ -2252,9 +2248,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "typespec"
-version = "0.9.1"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d514778bfa243e275f2a968d0aafdc40a0d89567bf310e0c64e735837c878372"
+checksum = "44f91ea93fdd5fd4985fcc0a197ed8e8da18705912bef63c9b9b3148d6f35510"
 dependencies = [
  "base64",
  "bytes",
@@ -2267,9 +2263,9 @@ dependencies = [
 
 [[package]]
 name = "typespec_client_core"
-version = "0.8.1"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ba4b8443d3a1d1a2042ed4b92c0357bb2ab056c1208a6b7627d927fdd616999"
+checksum = "1a0f6f7345c3389663551a64fc4dca78fa9689ece758c5ca76e82d6da69349dc"
 dependencies = [
  "async-trait",
  "base64",
@@ -2292,9 +2288,9 @@ dependencies = [
 
 [[package]]
 name = "typespec_macros"
-version = "0.8.1"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "530a5f141b8b7e9fc2ba8eb5c657520f68581daef103b36dfbc049d82c653d39"
+checksum = "6ecee5b05c459ea4cd97df7685db58699c32e070465f88dc806d7c98a5088edc"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -89,7 +89,7 @@ impl Args {
                         }),
                     )
                     .await?
-                    .into_body()?;
+                    .into_model()?;
 
                 tracing::debug!("retrieved {:?}", &secret);
                 let Some(secret) = secret.value else {
@@ -144,7 +144,7 @@ impl Args {
                                 }),
                             )
                             .await?
-                            .into_body()?
+                            .into_model()?
                             .try_into()
                     })
                     .await?;

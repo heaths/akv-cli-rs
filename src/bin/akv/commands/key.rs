@@ -199,7 +199,7 @@ impl Commands {
         let key = client
             .create_key(name, params.try_into()?, None)
             .await?
-            .into_body()?;
+            .into_model()?;
 
         show(&key)
     }
@@ -254,7 +254,7 @@ impl Commands {
                 }),
             )
             .await?
-            .into_body()?;
+            .into_model()?;
 
         show(&key)
     }
@@ -281,7 +281,7 @@ impl Commands {
                 }),
             )
             .await?
-            .into_body()?;
+            .into_model()?;
 
         show(&key)
     }

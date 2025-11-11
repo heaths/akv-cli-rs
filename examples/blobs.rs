@@ -22,26 +22,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get a container client.
     let credential = DeveloperToolsCredential::new(None)?;
-    let client = BlobServiceClient::new(&endpoint, credential, None)?
-        .blob_container_client("examples".into());
+    let client = BlobServiceClient::new(&endpoint, Some(credential), None)?
+        .blob_container_client("examples");
 
     if args.list_args().is_some() {
         // List blobs within the "examples" container.
         let mut pager = client.list_blobs(None)?;
-        while let Some(page) = pager.try_next().await? {
-            let page = page.into_body()?;
-            for blob in page.segment.blob_items {
-                let blob_name = blob.name.and_then(|n| n.content);
-                let blob_name = blob_name.as_deref().unwrap_or("(unknown)");
-                let content_type = blob.properties.and_then(|p| p.content_type);
-                let content_type = content_type.as_deref().unwrap_or("(unknown)");
-                println!("{blob_name} ({content_type})");
-            }
+        while let Some(blob) = pager.try_next().await? {
+            let blob_name = blob.name.and_then(|n| n.content);
+            let blob_name = blob_name.as_deref().unwrap_or("(unknown)");
+            let content_type = blob.properties.and_then(|p| p.content_type);
+            let content_type = content_type.as_deref().unwrap_or("(unknown)");
+            println!("{blob_name} ({content_type})");
         }
     } else if let Some(Commands::Read(args)) = args.command {
         // Read a blob within the "examples" container.
         let content = client
-            .blob_client(args.name)
+            .blob_client(&args.name)
             .download(None)
             .await?
             .into_body()
