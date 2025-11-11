@@ -180,7 +180,7 @@ impl Commands {
         let secret = client
             .set_secret(name, params.try_into()?, None)
             .await?
-            .into_body()?;
+            .into_model()?;
 
         show(&secret)
     }
@@ -234,7 +234,7 @@ impl Commands {
                 }),
             )
             .await?
-            .into_body()?;
+            .into_model()?;
 
         show(&secret)
     }
@@ -261,7 +261,7 @@ impl Commands {
                 }),
             )
             .await?
-            .into_body()?;
+            .into_model()?;
 
         show(&secret)
     }

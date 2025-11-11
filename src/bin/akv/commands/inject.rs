@@ -110,7 +110,7 @@ impl Args {
                         }),
                     )
                     .await?
-                    .into_body()?;
+                    .into_model()?;
 
                 Ok(secret.value.unwrap_or_else(String::new))
             }

@@ -76,7 +76,7 @@ impl Args {
                         }),
                     )
                     .await?
-                    .into_body()?
+                    .into_model()?
                     .try_into()
             })
             .await?;
