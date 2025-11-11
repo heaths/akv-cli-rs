@@ -75,7 +75,7 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         echo "OPENSSL_DIR=C:\Program Files\OpenSSL" >> $GITHUB_ENV
-        echo "OPENSSL_LIB_DIR=C:\Program Files\OpenSSL\lib\VC\x64\MT" >> $GITHUB_ENV
+        echo "OPENSSL_LIB_DIR=C:\Program Files\OpenSSL\lib\VC\${{ runner.arch }}\MT" >> $GITHUB_ENV
     - name: Build
       id: build
       run: |
