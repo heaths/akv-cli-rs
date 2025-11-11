@@ -24,15 +24,6 @@ use tracing_subscriber::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let loaded_azure_dotenv = dotazure::load().with_kind(ErrorKind::Io)?;
-    if loaded_azure_dotenv {
-        tracing::debug!("loaded environment variables from azd");
-    } else {
-        // Fall back to normal .env lookup.
-        let path = dotenvy::dotenv().with_kind(ErrorKind::Io)?;
-        tracing::debug!("loaded environment variables from {}", path.display());
-    }
-
     let args = Args::parse();
     let verbosity = match args.verbose {
         0 => LevelFilter::OFF,
@@ -54,9 +45,17 @@ async fn main() -> Result<()> {
         )))
         .init();
 
-    // Use only azd credential if we loaded azd .env file for consistent auth.
-    if loaded_azure_dotenv {
+    if dotazure::load().with_kind(ErrorKind::Io)? {
+        tracing::debug!("loaded environment variables from azd");
+        // Use only azd credential if we loaded azd .env file for consistent auth.
         let _ = CREDENTIAL.set(AzureDeveloperCliCredential::new(None)? as Arc<dyn TokenCredential>);
+    } else {
+        // Fall back to normal .env lookup.
+        match dotenvy::dotenv() {
+            Ok(path) => tracing::debug!("loaded environment variables from {}", path.display()),
+            Err(err) if err.not_found() => {}
+            Err(err) => return Err(akv_cli::Error::new(ErrorKind::Io, err)),
+        }
     }
 
     args.handle().await
