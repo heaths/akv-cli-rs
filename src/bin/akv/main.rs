@@ -14,7 +14,10 @@ use azure_identity::{AzureDeveloperCliCredential, DeveloperToolsCredential};
 use clap::ColorChoice;
 use clap::Parser;
 use commands::Commands;
-use std::sync::{Arc, OnceLock};
+use std::{
+    path::PathBuf,
+    sync::{Arc, OnceLock},
+};
 use time::macros::format_description;
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{
@@ -24,6 +27,8 @@ use tracing_subscriber::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let loaded_dotenv = dotenv()?;
+
     let args = Args::parse();
     let verbosity = match args.verbose {
         0 => LevelFilter::OFF,
@@ -31,6 +36,7 @@ async fn main() -> Result<()> {
         2 => LevelFilter::DEBUG,
         _ => LevelFilter::TRACE,
     };
+
     let mut filter = EnvFilter::from_default_env();
     if matches!(filter.max_level_hint(), Some(level) if level < verbosity) {
         filter = filter.add_directive(verbosity.into());
@@ -45,17 +51,17 @@ async fn main() -> Result<()> {
         )))
         .init();
 
-    if dotazure::load().with_kind(ErrorKind::Io)? {
-        tracing::debug!("loaded environment variables from azd");
-        // Use only azd credential if we loaded azd .env file for consistent auth.
-        let _ = CREDENTIAL.set(AzureDeveloperCliCredential::new(None)? as Arc<dyn TokenCredential>);
-    } else {
-        // Fall back to normal .env lookup.
-        match dotenvy::dotenv() {
-            Ok(path) => tracing::debug!("loaded environment variables from {}", path.display()),
-            Err(err) if err.not_found() => {}
-            Err(err) => return Err(akv_cli::Error::new(ErrorKind::Io, err)),
+    match loaded_dotenv {
+        Dotenv::Azure => {
+            tracing::debug!("loaded environment variables from azd");
+            // Use only azd credential if we loaded azd .env file for consistent auth.
+            let _ =
+                CREDENTIAL.set(AzureDeveloperCliCredential::new(None)? as Arc<dyn TokenCredential>);
         }
+        Dotenv::Fallback(path) => {
+            tracing::debug!("loaded environment variables from {}", path.display())
+        }
+        _ => {}
     }
 
     args.handle().await
@@ -92,6 +98,26 @@ impl Args {
 
     async fn handle(&self) -> Result<()> {
         self.command.handle(self).await
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum Dotenv {
+    None,
+    Azure,
+    Fallback(PathBuf),
+}
+
+fn dotenv() -> akv_cli::Result<Dotenv> {
+    if dotazure::load().with_kind(ErrorKind::Io)? {
+        return Ok(Dotenv::Azure);
+    }
+
+    // Fall back to normal .env lookup.
+    match dotenvy::dotenv() {
+        Ok(path) => Ok(Dotenv::Fallback(path)),
+        Err(err) if err.not_found() => Ok(Dotenv::None),
+        Err(err) => Err(akv_cli::Error::new(ErrorKind::Io, err)),
     }
 }
 
