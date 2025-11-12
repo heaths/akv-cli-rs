@@ -40,4 +40,4 @@ jobs:
         HOMEBREW_GIT_EMAIL: ${{ steps.user.outputs.email }}
         # https://github.com/settings/tokens/new?scopes=repo&description=Homebrew
         HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
-        TARBALL_URL: ${{ github.server_url }}/${{ github.repository }}/archive/refs/tags/${{ inputs.tag || github.ref }}.tar.gz
+        TARBALL_URL: ${{ github.server_url }}/${{ github.repository }}/archive/${{ format('refs/tags/{0}', inputs.tag) || github.ref }}.tar.gz
