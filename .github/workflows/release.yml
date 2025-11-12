@@ -142,6 +142,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: attest
     steps:
+    - name: Checkout
+      uses: actions/checkout@v4
     - name: Release
       run: gh release edit '${{ github.ref_name }}' --draft=false
       env:
