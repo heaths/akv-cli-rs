@@ -45,12 +45,6 @@ cargo fmt --all
 # Run clippy lints (CI runs with -Dwarnings)
 cargo clippy --all-features --all-targets --no-deps --workspace
 
-# Check spelling
-npm run spell-check
-
-# Lint markdown files
-npm run markdown-lint
-
 # Build documentation
 cargo doc --all-features --no-deps --workspace
 ```
@@ -58,7 +52,8 @@ cargo doc --all-features --no-deps --workspace
 **Always run linting after making changes:**
 
 - Format code with `cargo fmt --all`
-- Run `npm run spell-check` and `npm run markdown-lint` for documentation changes
+- Use the [spell-check skill](skills/spell-check/SKILL.md) for spelling issues
+- Use the [markdown-lint skill](skills/markdown-lint/SKILL.md) for markdown formatting
 - Fix any issues before committing
 
 ### Benchmarks
