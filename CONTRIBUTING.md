@@ -17,12 +17,19 @@ All the prerequisite software required to contribute code in this project will b
 You can also work in this codebase locally. You'll need the following prerequisites:
 
 * [Rust]
+* [Node.js] 22 or later (for spell checking with cspell)
 * [Azure CLI]
 * (Recommended) [Visual Studio Code]
 * (Recommended) [Azure Developer CLI]
 
 When you open VSCode, you should be prompted to install additional, recommended extensions,
 including rust-analyzer, the LLDB debugger, and more.
+
+After cloning the repository, install Node.js dependencies:
+
+```bash
+npm install
+```
 
 ## Building
 
@@ -77,6 +84,40 @@ In PowerShell:
 . ./examples/setup.ps1
 ```
 
+## Linting
+
+### Spell Checking
+
+To check spelling:
+
+```bash
+npm run spell-check
+```
+
+To automatically fix spelling issues where possible:
+
+```bash
+npm run spell-check:fix
+```
+
+The spell checker uses cspell with configuration in `.cspell.json`. Add custom words to the `words` array in that file.
+
+### Markdown Linting
+
+To lint markdown files:
+
+```bash
+npm run markdown-lint
+```
+
+To automatically fix markdown issues where possible:
+
+```bash
+npm run markdown-lint:fix
+```
+
+The markdown linter uses markdownlint-cli2 with configuration in `.markdownlint-cli2.yaml`.
+
 ## Examples
 
 ### Blobs
@@ -123,6 +164,7 @@ but `debug` for all `akv` traces.
 [Dev container]: https://code.visualstudio.com/docs/devcontainers/create-dev-container
 [dotazure]: https://github.com/heaths/dotazure-rs
 [GitHub Codespaces]: https://github.com/features/codespaces
+[Node.js]: https://nodejs.org
 [Rust]: https://www.rust-lang.org
 [RUST_LOG]: https://docs.rs/env_logger/latest/env_logger/#enabling-logging
 [Visual Studio Code]: https://code.visualstudio.com

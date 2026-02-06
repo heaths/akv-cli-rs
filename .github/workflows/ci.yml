@@ -71,13 +71,20 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Set up toolchain
       run: rustup install
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+    - name: Install Node.js dependencies
+      run: npm ci
     - name: Check formatting
       run: cargo fmt --all -- --check
     - name: Lint
       run: cargo clippy --all-features --all-targets --no-deps --workspace
     - name: Check spelling
-      uses: streetsidesoftware/cspell-action@v6
-      with:
-        config: .cspell.json
+      run: npm run spell-check
+    - name: Lint markdown
+      run: npm run markdown-lint
     - name: Build documentation
       run: cargo doc --all-features --no-deps --workspace
