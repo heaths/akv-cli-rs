@@ -7,10 +7,7 @@ use akv_cli::{
     Error, ErrorKind, Result,
 };
 use azure_core::http::Url;
-use azure_security_keyvault_keys::{
-    models::{KeyClientUnwrapKeyOptions, KeyOperationParameters},
-    KeyClient, ResourceId,
-};
+use azure_security_keyvault_keys::{models::KeyOperationParameters, KeyClient, ResourceId};
 use clap::Parser;
 use std::{
     io::{self, Write as _},
@@ -69,11 +66,9 @@ impl Args {
                 client
                     .unwrap_key(
                         &name,
+                        version.as_deref().unwrap_or(""),
                         params.try_into()?,
-                        Some(KeyClientUnwrapKeyOptions {
-                            key_version: version,
-                            ..Default::default()
-                        }),
+                        None,
                     )
                     .await?
                     .into_model()?

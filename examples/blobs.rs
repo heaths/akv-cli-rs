@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use akv_cli::{ErrorKind, ResultExt};
-use azure_identity::DeveloperToolsCredential;
+use azure_identity_32::DeveloperToolsCredential;
 use azure_storage_blob::BlobServiceClient;
 use clap::{Parser, Subcommand};
 use futures::TryStreamExt;

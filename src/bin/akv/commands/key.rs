@@ -617,7 +617,6 @@ impl From<azure_security_keyvault_keys::models::KeyOperation> for KeyOperation {
             azure_security_keyvault_keys::models::KeyOperation::UnknownValue(s) => {
                 Self::UnknownValue(s.clone())
             }
-            _ => Self::UnknownValue("(unknown)".into()),
         }
     }
 }
