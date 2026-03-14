@@ -8,10 +8,7 @@ use akv_cli::{
     Result,
 };
 use azure_core::http::Url;
-use azure_security_keyvault_keys::{
-    models::{KeyClientWrapKeyOptions, KeyOperationParameters},
-    KeyClient,
-};
+use azure_security_keyvault_keys::{models::KeyOperationParameters, KeyClient};
 use clap::Parser;
 use std::path::PathBuf;
 use tokio::{
@@ -90,14 +87,7 @@ impl Args {
                     ..Default::default()
                 };
                 client
-                    .wrap_key(
-                        &self.name,
-                        params.try_into()?,
-                        Some(KeyClientWrapKeyOptions {
-                            key_version: Some(version.into()),
-                            ..Default::default()
-                        }),
-                    )
+                    .wrap_key(&self.name, version, params.try_into()?, None)
                     .await?
                     .into_model()?
                     .try_into()

@@ -870,7 +870,6 @@ impl From<&azure_security_keyvault_certificates::models::KeyUsageType> for KeyUs
             azure_security_keyvault_certificates::models::KeyUsageType::UnknownValue(s) => {
                 Self::UnknownValue(s.clone())
             }
-            _ => Self::UnknownValue("(unknown)".into()),
         }
     }
 }
