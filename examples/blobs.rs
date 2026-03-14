@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use akv_cli::{ErrorKind, ResultExt};
-use azure_identity_32::DeveloperToolsCredential;
+use azure_identity::DeveloperToolsCredential;
 use azure_storage_blob::BlobServiceClient;
 use clap::{Parser, Subcommand};
 use futures::TryStreamExt;
@@ -29,8 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // List blobs within the "examples" container.
         let mut pager = client.list_blobs(None)?;
         while let Some(blob) = pager.try_next().await? {
-            let blob_name = blob.name.and_then(|n| n.content);
-            let blob_name = blob_name.as_deref().unwrap_or("(unknown)");
+            let blob_name = blob.name.as_deref().unwrap_or("(unknown)");
             let content_type = blob.properties.and_then(|p| p.content_type);
             let content_type = content_type.as_deref().unwrap_or("(unknown)");
             println!("{blob_name} ({content_type})");
