@@ -12,7 +12,7 @@ mod secret;
 
 use akv_cli::{parsing::parse_date_time_opt, ErrorKind, Result};
 use azure_security_keyvault_secrets::ResourceId;
-use clap::{ArgAction, Args, CommandFactory, Subcommand};
+use clap::{ArgAction, Args, CommandFactory, Subcommand, ValueEnum};
 use clap_complete::{generate, Shell};
 use std::{borrow::Cow, collections::HashMap, io};
 use time::OffsetDateTime;
@@ -91,6 +91,17 @@ pub struct AttributeArgs {
     /// When the resource becomes valid in RFC3339 format.
     #[arg(long, value_parser = parse_date_time_opt)]
     pub not_before: Option<OffsetDateTime>,
+}
+
+/// Output format for command results.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ValueEnum)]
+pub enum OutputFormat {
+    /// Default output format.
+    #[default]
+    Default,
+
+    /// JSON output format.
+    Json,
 }
 
 trait IsDefault {

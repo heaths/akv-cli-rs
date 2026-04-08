@@ -5,7 +5,7 @@ use super::{elapsed, VAULT_ENV_NAME};
 use crate::{
     commands::{
         key::{CurveName, KeySize, KeyType},
-        map_tags, map_vec, AttributeArgs, IsDefault,
+        map_tags, map_vec, AttributeArgs, IsDefault, OutputFormat,
     },
     credential, TableExt,
 };
@@ -89,6 +89,10 @@ pub enum Commands {
         /// Repeat argument once for each tag.
         #[arg(long, value_name = "NAME[=VALUE]", value_parser = parse_key_value_opt::<String>)]
         tags: Vec<(String, Option<String>)>,
+
+        /// Output format.
+        #[arg(long, value_enum, default_value_t)]
+        output: OutputFormat,
     },
 
     /// Edits a certificate in an Azure Key Vault.
@@ -112,6 +116,10 @@ pub enum Commands {
         /// Repeat argument once for each tag.
         #[arg(long, value_name = "NAME[=VALUE]", value_parser = parse_key_value_opt::<String>)]
         tags: Vec<(String, Option<String>)>,
+
+        /// Output format.
+        #[arg(long, value_enum, default_value_t)]
+        output: OutputFormat,
     },
 
     /// Edits the certificate policy for the next certificate request.
@@ -182,6 +190,10 @@ pub enum Commands {
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
         #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Option<Url>,
+
+        /// Output format.
+        #[arg(long, value_enum, default_value_t)]
+        output: OutputFormat,
     },
 
     /// Gets the certificate policy for the next version of a certificate created in an Azure Key Vault.
@@ -208,6 +220,10 @@ pub enum Commands {
         /// Show more details about each certificate.
         #[arg(long)]
         long: bool,
+
+        /// Output format.
+        #[arg(long, value_enum, default_value_t)]
+        output: OutputFormat,
     },
 
     /// List versions of a certificate in an Azure Key Vault.
@@ -227,24 +243,28 @@ pub enum Commands {
         /// Show more details about each version.
         #[arg(long)]
         long: bool,
+
+        /// Output format.
+        #[arg(long, value_enum, default_value_t)]
+        output: OutputFormat,
     },
 }
 
 impl Commands {
     pub async fn handle(&self, global_args: &crate::Args) -> Result<()> {
         match &self {
-            Commands::Create { .. } => self.create().await,
-            Commands::Edit { .. } => self.edit().await,
+            Commands::Create { .. } => self.create(global_args).await,
+            Commands::Edit { .. } => self.edit(global_args).await,
             Commands::EditPolicy { .. } => self.edit_policy(global_args).await,
-            Commands::Get { .. } => self.get().await,
+            Commands::Get { .. } => self.get(global_args).await,
             Commands::GetPolicy { .. } => self.get_policy(global_args).await,
             Commands::List { .. } => self.list(global_args).await,
             Commands::ListVersions { .. } => self.list_versions(global_args).await,
         }
     }
 
-    #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name), err)]
-    async fn create(&self) -> Result<()> {
+    #[tracing::instrument(level = Level::INFO, skip(self, global_args), fields(vault, name), err)]
+    async fn create(&self, global_args: &crate::Args) -> Result<()> {
         let Commands::Create {
             name,
             vault,
@@ -265,6 +285,7 @@ impl Commands {
                     not_before,
                 },
             tags,
+            output,
         } = self
         else {
             panic!("invalid command");
@@ -329,11 +350,14 @@ impl Commands {
             .await?
             .into_model()?;
 
-        show(&certificate)
+        match output {
+            OutputFormat::Json => json::print(&certificate, global_args.color()),
+            OutputFormat::Default => show(&certificate),
+        }
     }
 
-    #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
-    async fn edit(&self) -> Result<()> {
+    #[tracing::instrument(level = Level::INFO, skip(self, global_args), fields(vault, name, version), err)]
+    async fn edit(&self, global_args: &crate::Args) -> Result<()> {
         let Commands::Edit {
             id,
             vault,
@@ -345,6 +369,7 @@ impl Commands {
                     not_before,
                 },
             tags,
+            output,
         } = self
         else {
             panic!("invalid command");
@@ -382,7 +407,10 @@ impl Commands {
             .await?
             .into_model()?;
 
-        show(&certificate)
+        match output {
+            OutputFormat::Json => json::print(&certificate, global_args.color()),
+            OutputFormat::Default => show(&certificate),
+        }
     }
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
@@ -462,9 +490,15 @@ impl Commands {
         Ok(())
     }
 
-    #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
-    async fn get(&self) -> Result<()> {
-        let Commands::Get { id, name, vault } = self else {
+    #[tracing::instrument(level = Level::INFO, skip(self, global_args), fields(vault, name, version), err)]
+    async fn get(&self, global_args: &crate::Args) -> Result<()> {
+        let Commands::Get {
+            id,
+            name,
+            vault,
+            output,
+        } = self
+        else {
             panic!("invalid command");
         };
 
@@ -486,7 +520,10 @@ impl Commands {
             .await?
             .into_model()?;
 
-        show(&certificate)
+        match output {
+            OutputFormat::Json => json::print(&certificate, global_args.color()),
+            OutputFormat::Default => show(&certificate),
+        }
     }
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name), err)]
@@ -511,7 +548,12 @@ impl Commands {
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault), err)]
     async fn list(&self, global_args: &crate::Args) -> Result<()> {
-        let Commands::List { vault, long } = self else {
+        let Commands::List {
+            vault,
+            long,
+            output,
+        } = self
+        else {
             panic!("invalid command");
         };
 
@@ -523,6 +565,10 @@ impl Commands {
             .try_collect()
             .await?;
         certificates.sort_by(|a, b| a.id.cmp(&b.id));
+
+        if matches!(output, OutputFormat::Json) {
+            return json::print(&certificates, global_args.color());
+        }
 
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
@@ -586,6 +632,7 @@ impl Commands {
             name,
             vault,
             long,
+            output,
         } = self
         else {
             panic!("invalid command");
@@ -607,6 +654,10 @@ impl Commands {
             let b = b.attributes.as_ref().and_then(|x| x.updated);
             a.cmp(&b).reverse()
         });
+
+        if matches!(output, OutputFormat::Json) {
+            return json::print(&certificates, global_args.color());
+        }
 
         let mut table = Table::new();
         table.set_format(*format::consts::FORMAT_NO_BORDER_LINE_SEPARATOR);
