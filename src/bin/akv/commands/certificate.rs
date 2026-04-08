@@ -91,7 +91,7 @@ pub enum Commands {
         tags: Vec<(String, Option<String>)>,
 
         /// Output format.
-        #[arg(long, value_enum, default_value_t)]
+        #[arg(short = 'o', long, value_enum, default_value_t)]
         output: OutputFormat,
     },
 
@@ -118,7 +118,7 @@ pub enum Commands {
         tags: Vec<(String, Option<String>)>,
 
         /// Output format.
-        #[arg(long, value_enum, default_value_t)]
+        #[arg(short = 'o', long, value_enum, default_value_t)]
         output: OutputFormat,
     },
 
@@ -192,7 +192,7 @@ pub enum Commands {
         vault: Option<Url>,
 
         /// Output format.
-        #[arg(long, value_enum, default_value_t)]
+        #[arg(short = 'o', long, value_enum, default_value_t)]
         output: OutputFormat,
     },
 
@@ -222,7 +222,7 @@ pub enum Commands {
         long: bool,
 
         /// Output format.
-        #[arg(long, value_enum, default_value_t)]
+        #[arg(short = 'o', long, value_enum, default_value_t)]
         output: OutputFormat,
     },
 
@@ -245,7 +245,7 @@ pub enum Commands {
         long: bool,
 
         /// Output format.
-        #[arg(long, value_enum, default_value_t)]
+        #[arg(short = 'o', long, value_enum, default_value_t)]
         output: OutputFormat,
     },
 }
