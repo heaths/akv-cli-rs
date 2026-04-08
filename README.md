@@ -152,6 +152,42 @@ akv certificate edit-policy --name my-cert --vault https://my-vault.vault.azure.
     --reuse-key --validity 3
 ```
 
+### Output format
+
+Commands that display resources such as `secret list`, `key get`, or `certificate list-versions` support `--output` to control the output format:
+
+- `--output default` — displays a formatted table or key-value summary (the default).
+- `--output json` — prints the raw JSON response for scripting or inspection.
+
+For example:
+
+```bash
+akv secret list --vault https://my-vault.vault.azure.net --output json
+akv key get --name my-key --vault https://my-vault.vault.azure.net --output json
+```
+
+### Colors
+
+When the `color` feature is enabled (the default), JSON output and tables are colorized.
+You can control color output with the `--color` flag (`always`, `never`, or `auto`).
+
+JSON colors are configured using the `JQ_COLORS` environment variable, using the same format as [`jq`][jq-colors].
+If you already have `JQ_COLORS` configured for `jq`, `akv` will use the same colors automatically.
+
+The format is 8 colon-separated `style;color` pairs:
+
+```text
+null:false:true:number:string:array:object:object-key
+```
+
+For example, the default is equivalent to:
+
+```bash
+export JQ_COLORS="0;90:0;39:0;39:0;39:0;32:1;39:1;39:1;34"
+```
+
+[jq-colors]: https://jqlang.org/manual/#colors
+
 ## Background
 
 Though still a work in progress, inspiration was derived from the [1Password CLI].
