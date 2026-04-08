@@ -5,10 +5,10 @@ use super::VAULT_ENV_NAME;
 use crate::credential;
 use akv_cli::{
     jose::{Algorithm, Encode, EncryptionAlgorithm, Jwe},
-    Result,
+    Error, ErrorKind, Result,
 };
 use azure_core::http::Url;
-use azure_security_keyvault_keys::{models::KeyOperationParameters, KeyClient};
+use azure_security_keyvault_keys::{models::KeyOperationParameters, KeyClient, ResourceId};
 use clap::Parser;
 use std::path::PathBuf;
 use tokio::{
@@ -19,19 +19,23 @@ use tracing::{Level, Span};
 
 #[derive(Debug, Parser)]
 pub struct Args {
+    /// The key URL e.g., "https://my-vault.vault.azure.net/keys/my-key/version".
+    ///
+    /// The key URL must include a version.
+    #[arg(group = "ident", value_name = "URL")]
+    id: Option<Url>,
+
     /// The key name.
-    #[arg(long)]
-    name: String,
+    #[arg(long, group = "ident", requires_all = ["vault", "version"])]
+    name: Option<String>,
 
     /// The key version.
-    ///
-    /// By default, the latest is used and the full key ID is encoded into the JWE to prevent data-lockout.
-    #[arg(long)]
+    #[arg(long, requires = "name")]
     version: Option<String>,
 
     /// The vault URL e.g., "https://my-vault.vault.azure.net".
     #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
-    vault: Url,
+    vault: Option<Url>,
 
     /// The algorithm to encrypt the content encryption key (CEK).
     #[arg(long, value_enum, default_value_t = Algorithm::RSA_OAEP)]
@@ -53,11 +57,36 @@ pub struct Args {
 }
 
 impl Args {
-    #[tracing::instrument(level = Level::INFO, skip(self), fields(vault = %self.vault, name = self.name, version, kid), err)]
+    #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version, kid), err)]
     pub async fn encrypt(&self) -> Result<()> {
-        let version = self.version.as_deref().unwrap_or_default();
+        let (vault_url, name, version) = match (
+            self.id.as_ref(),
+            self.vault.as_ref(),
+            self.name.as_ref(),
+            self.version.as_ref(),
+        ) {
+            (Some(id), _, _, _) => {
+                let resource: ResourceId = id.try_into()?;
+                let version = resource.version.ok_or_else(|| {
+                    Error::with_message(ErrorKind::InvalidData, "key URL must include a version")
+                })?;
+                (resource.vault_url, resource.name, version)
+            }
+            (None, Some(vault), Some(name), Some(version)) => {
+                (vault.as_str().to_string(), name.clone(), version.clone())
+            }
+            _ => {
+                return Err(Error::with_message(
+                    ErrorKind::InvalidData,
+                    "specify a key URL or --name, --vault, and --version",
+                ));
+            }
+        };
+
         let span = Span::current();
-        span.record("version", version);
+        span.record("vault", &vault_url);
+        span.record("name", &name);
+        span.record("version", &version);
 
         let plaintext: Vec<u8> = match (self.value.as_deref(), self.in_file.as_deref()) {
             (Some(value), _) => value.as_bytes().to_vec(),
@@ -71,14 +100,16 @@ impl Args {
             _ => panic!("inconceivable"),
         };
 
-        let client = KeyClient::new(self.vault.as_str(), credential()?, None)?;
+        let kid = format!(
+            "{}/keys/{}/{version}",
+            vault_url.trim_end_matches('/'),
+            name
+        );
+        let client = KeyClient::new(&vault_url, credential()?, None)?;
         let jwe = Jwe::encryptor()
             .alg(self.algorithm.clone())
             .enc(self.encryption.clone())
-            .kid(format!(
-                "https://{}/keys/{}/{version}",
-                self.vault, self.name
-            ))
+            .kid(kid)
             .plaintext(&plaintext)
             .encrypt(async |_, enc, cek| {
                 let params = KeyOperationParameters {
@@ -87,7 +118,7 @@ impl Args {
                     ..Default::default()
                 };
                 client
-                    .wrap_key(&self.name, version, params.try_into()?, None)
+                    .wrap_key(&name, &version, params.try_into()?, None)
                     .await?
                     .into_model()?
                     .try_into()
