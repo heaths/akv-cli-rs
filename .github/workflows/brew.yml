@@ -3,8 +3,7 @@ name: brew
 on:
   release:
     types:
-    - released
-    - prereleased
+    - published
   workflow_dispatch:
     inputs:
       tag:
