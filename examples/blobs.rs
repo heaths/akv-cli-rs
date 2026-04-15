@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .blob_client(&args.name)
             .download(None)
             .await?
-            .into_body()
+            .body
             .collect()
             .await?;
         match args.output {
