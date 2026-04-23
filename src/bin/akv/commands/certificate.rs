@@ -1,7 +1,7 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use super::{elapsed, models::certificate as cert_models, VAULT_ENV_NAME};
+use super::{elapsed, models, VAULT_ENV_NAME};
 use crate::{
     commands::{
         key::{CurveName, KeySize, KeyType},
@@ -356,10 +356,9 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(
-                &cert_models::Certificate::from(certificate),
-                global_args.color(),
-            ),
+            OutputFormat::Json => {
+                json::print(&models::Certificate::from(certificate), global_args.color())
+            }
             OutputFormat::Default => show(&certificate),
         }
     }
@@ -416,10 +415,9 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(
-                &cert_models::Certificate::from(certificate),
-                global_args.color(),
-            ),
+            OutputFormat::Json => {
+                json::print(&models::Certificate::from(certificate), global_args.color())
+            }
             OutputFormat::Default => show(&certificate),
         }
     }
@@ -496,7 +494,7 @@ impl Commands {
 
         if let Some(policy) = certificate.policy {
             json::print(
-                &cert_models::CertificatePolicy::from(policy),
+                &models::CertificatePolicy::from(policy),
                 global_args.color(),
             )?;
         }
@@ -535,10 +533,9 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(
-                &cert_models::Certificate::from(certificate),
-                global_args.color(),
-            ),
+            OutputFormat::Json => {
+                json::print(&models::Certificate::from(certificate), global_args.color())
+            }
             OutputFormat::Default => show(&certificate),
         }
     }
@@ -561,7 +558,7 @@ impl Commands {
             .into_model()?;
 
         json::print(
-            &cert_models::CertificatePolicy::from(policy),
+            &models::CertificatePolicy::from(policy),
             global_args.color(),
         )
     }

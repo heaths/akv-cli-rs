@@ -1,7 +1,7 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use super::{elapsed, models::secret as secret_models, VAULT_ENV_NAME};
+use super::{elapsed, models, VAULT_ENV_NAME};
 use crate::{
     commands::{map_tags, AttributeArgs, IsDefault, OutputFormat},
     credential, TableExt,
@@ -208,9 +208,7 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => {
-                json::print(&secret_models::Secret::from(secret), global_args.color())
-            }
+            OutputFormat::Json => json::print(&models::Secret::from(secret), global_args.color()),
             OutputFormat::Default => show(&secret),
         }
     }
@@ -268,9 +266,7 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => {
-                json::print(&secret_models::Secret::from(secret), global_args.color())
-            }
+            OutputFormat::Json => json::print(&models::Secret::from(secret), global_args.color()),
             OutputFormat::Default => show(&secret),
         }
     }
@@ -306,9 +302,7 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => {
-                json::print(&secret_models::Secret::from(secret), global_args.color())
-            }
+            OutputFormat::Json => json::print(&models::Secret::from(secret), global_args.color()),
             OutputFormat::Default => show(&secret),
         }
     }
