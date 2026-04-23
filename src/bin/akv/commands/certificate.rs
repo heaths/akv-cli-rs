@@ -1,7 +1,7 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use super::{elapsed, VAULT_ENV_NAME};
+use super::{elapsed, models::certificate as cert_models, VAULT_ENV_NAME};
 use crate::{
     commands::{
         key::{CurveName, KeySize, KeyType},
@@ -344,28 +344,22 @@ impl Commands {
         spinner.finish_and_clear();
 
         let ResourceId { name, version, .. } = certificate.resource_id()?;
-        let vault = vault.as_str();
-        let mut certificate = client
+        let certificate = client
             .get_certificate(
                 &name,
                 Some(CertificateClientGetCertificateOptions {
-                    certificate_version: version.clone(),
+                    certificate_version: version,
                     ..Default::default()
                 }),
             )
             .await?
             .into_model()?;
 
-        if certificate.id.is_none() {
-            let id = format!("{}/certificates/{}", vault.trim_end_matches('/'), &name);
-            certificate.id = Some(match version.as_deref() {
-                Some(v) => format!("{}/{}", id, v),
-                None => id,
-            });
-        }
-
         match output {
-            OutputFormat::Json => json::print(&certificate, global_args.color()),
+            OutputFormat::Json => json::print(
+                &cert_models::Certificate::from(certificate),
+                global_args.color(),
+            ),
             OutputFormat::Default => show(&certificate),
         }
     }
@@ -409,28 +403,23 @@ impl Commands {
             ..Default::default()
         };
 
-        let mut certificate = client
+        let certificate = client
             .update_certificate_properties(
                 &name,
                 params.try_into()?,
                 Some(CertificateClientUpdateCertificatePropertiesOptions {
-                    certificate_version: version.as_deref().map(str::to_string),
+                    certificate_version: version.map(Into::into),
                     ..Default::default()
                 }),
             )
             .await?
             .into_model()?;
 
-        if certificate.id.is_none() {
-            let id = format!("{}/certificates/{}", vault.trim_end_matches('/'), &name);
-            certificate.id = Some(match version.as_deref() {
-                Some(v) => format!("{}/{}", id, v),
-                None => id,
-            });
-        }
-
         match output {
-            OutputFormat::Json => json::print(&certificate, global_args.color()),
+            OutputFormat::Json => json::print(
+                &cert_models::Certificate::from(certificate),
+                global_args.color(),
+            ),
             OutputFormat::Default => show(&certificate),
         }
     }
@@ -505,8 +494,11 @@ impl Commands {
             .await?
             .into_model()?;
 
-        if let Some(ref policy) = certificate.policy {
-            json::print(policy, global_args.color())?;
+        if let Some(policy) = certificate.policy {
+            json::print(
+                &cert_models::CertificatePolicy::from(policy),
+                global_args.color(),
+            )?;
         }
 
         Ok(())
@@ -531,27 +523,22 @@ impl Commands {
         current.record("version", version.as_deref());
 
         let client = CertificateClient::new(&vault, credential()?, None)?;
-        let mut certificate = client
+        let certificate = client
             .get_certificate(
                 &name,
                 Some(CertificateClientGetCertificateOptions {
-                    certificate_version: version.as_deref().map(str::to_string),
+                    certificate_version: version.map(Into::into),
                     ..Default::default()
                 }),
             )
             .await?
             .into_model()?;
 
-        if certificate.id.is_none() {
-            let id = format!("{}/certificates/{}", vault.trim_end_matches('/'), &name);
-            certificate.id = Some(match version.as_deref() {
-                Some(v) => format!("{}/{}", id, v),
-                None => id,
-            });
-        }
-
         match output {
-            OutputFormat::Json => json::print(&certificate, global_args.color()),
+            OutputFormat::Json => json::print(
+                &cert_models::Certificate::from(certificate),
+                global_args.color(),
+            ),
             OutputFormat::Default => show(&certificate),
         }
     }
@@ -573,7 +560,10 @@ impl Commands {
             .await?
             .into_model()?;
 
-        json::print(&policy, global_args.color())
+        json::print(
+            &cert_models::CertificatePolicy::from(policy),
+            global_args.color(),
+        )
     }
 
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault), err)]

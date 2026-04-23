@@ -6,6 +6,7 @@ mod decrypt;
 mod encrypt;
 mod inject;
 mod key;
+mod models;
 mod read;
 mod run;
 mod secret;
