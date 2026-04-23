@@ -1,0 +1,37 @@
+name: live
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install azd
+      uses: Azure/setup-azd@v2
+
+    - name: Authenticate (federated)
+      run: >
+        azd auth login
+        --client-id "${env:AZURE_CLIENT_ID}"
+        --federated-credential-provider "github"
+        --tenant-id "${env:AZURE_TENANT_ID}"
+      shell: pwsh
+
+    - name: Provision
+      run: azd provision --no-prompt
+
+    - name: Test
+      run: Invoke-Pester tests/test.ps1 -Output Detailed
+      shell: pwsh
