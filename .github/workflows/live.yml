@@ -2,10 +2,20 @@ name: live
 
 on:
   workflow_dispatch:
+    inputs:
+      clean:
+        description: Whether to delete and purge resources
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   id-token: write
   contents: read
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   test:
@@ -17,17 +27,26 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-
     - name: Install azd
       uses: Azure/setup-azd@v2
-
+    - name: Cache
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Set up toolchain
+      run: rustup install
     - name: Authentication az (OIDC)
       uses: azure/login@v2
       with:
         client-id: ${{ vars.AZURE_CLIENT_ID }}
         tenant-id: ${{ vars.AZURE_TENANT_ID }}
         subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
     - name: Authenticate azd (OIDC)
       run: >
         azd auth login
@@ -35,10 +54,11 @@ jobs:
         --federated-credential-provider "github"
         --tenant-id "${env:AZURE_TENANT_ID}"
       shell: pwsh
-
     - name: Provision
       run: azd provision --no-prompt
-
     - name: Test
       run: Invoke-Pester tests/test.ps1 -Output Detailed
       shell: pwsh
+    - name: Clean
+      if: inputs.clean
+      run: azd down --force --purge --no-prompt
