@@ -18,9 +18,10 @@ You can also work in this codebase locally. You'll need the following prerequisi
 
 * [Rust]
 * [Node.js] 22 or later (for spell checking with cspell)
-* [Azure CLI]
 * (Recommended) [Visual Studio Code]
 * (Recommended) [Azure Developer CLI]
+* (Recommended) [PowerShell]
+* (Recommended) [Pester]
 
 When you open VSCode, you should be prompted to install additional, recommended extensions,
 including rust-analyzer, the LLDB debugger, and more.
@@ -60,9 +61,8 @@ cargo run -- secret list
 cargo run -- read --name secret-1
 ```
 
-If you provision a vault using `azd`, a `.env` file is created under `.azure/dev/.env`, which debug builds
-of this project will read automatically. Support for `.env` files is only compiled into debug builds for safety. Release builds require passing the vault URL
-to the `--vault` parameter.
+If you provision a vault using `azd`, a `.env` file is created under `.azure/dev/.env`, which
+this project will read automatically.
 
 To provision secret variables for demonstration, source an appropriate setup script under the `examples/` directory:
 
@@ -82,6 +82,16 @@ In PowerShell:
 ```powershell
 # You can also invoke the script from within powershell.
 . ./examples/setup.ps1
+```
+
+### Manual testing
+
+To manually test the CLI, install [Pester] in [PowerShell] and run:
+
+```powershell
+azd up # If you haven't already
+
+Invoke-Pester tests/test.ps1
 ```
 
 ## Linting
@@ -159,12 +169,13 @@ RUST_LOG=info,akv=debug cargo run -- secret list
 The [`RUST_LOG`][RUST_LOG] environment variable here sets the default tracing level to `info`
 but `debug` for all `akv` traces.
 
-[Azure CLI]: https://learn.microsoft.com/cli/azure/
 [Azure Developer CLI]: https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd
 [Dev container]: https://code.visualstudio.com/docs/devcontainers/create-dev-container
 [dotazure]: https://github.com/heaths/dotazure-rs
 [GitHub Codespaces]: https://github.com/features/codespaces
 [Node.js]: https://nodejs.org
+[Pester]: https://pester.dev/docs/introduction/installation
+[PowerShell]: https://learn.microsoft.com/powershell/scripting/install/install-powershell
 [Rust]: https://www.rust-lang.org
 [RUST_LOG]: https://docs.rs/env_logger/latest/env_logger/#enabling-logging
 [Visual Studio Code]: https://code.visualstudio.com

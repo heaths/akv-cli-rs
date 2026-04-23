@@ -7,7 +7,7 @@ use akv_cli::{
     Error, ErrorKind, Result,
 };
 use azure_core::http::Url;
-use azure_security_keyvault_keys::{models::KeyOperationParameters, KeyClient, ResourceId};
+use azure_security_keyvault_keys::{models::KeyOperationParameters, KeyClient};
 use clap::Parser;
 use std::{
     io::{self, Write as _},
@@ -49,7 +49,7 @@ impl Args {
                 let kid: Url = kid.parse()?;
                 span.record("kid", kid.as_str());
 
-                let ResourceId {
+                let super::Resource {
                     vault_url,
                     name,
                     version,

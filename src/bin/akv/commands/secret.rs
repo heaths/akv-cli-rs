@@ -20,7 +20,7 @@ use azure_security_keyvault_secrets::{
     },
     ResourceExt, ResourceId, SecretClient,
 };
-use clap::Subcommand;
+use clap::{ArgGroup, Subcommand};
 use futures::{future, TryStreamExt as _};
 use prettytable::{color, format, Attr, Cell, Row, Table};
 use timeago::Formatter;
@@ -58,13 +58,14 @@ pub enum Commands {
     },
 
     /// Edits a secret in an Azure Key Vault.
+    #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     Edit {
         /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
-        #[arg(group = "ident", value_name = "URL")]
+        #[arg(value_name = "URL")]
         id: Option<Url>,
 
         /// The secret name.
-        #[arg(long, group = "ident", requires = "vault")]
+        #[arg(long, requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -89,13 +90,14 @@ pub enum Commands {
     },
 
     /// Gets information about a secret in an Azure Key Vault.
+    #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     Get {
         /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
-        #[arg(group = "ident", value_name = "URL")]
+        #[arg(value_name = "URL")]
         id: Option<Url>,
 
         /// The secret name.
-        #[arg(long, group = "ident", requires = "vault")]
+        #[arg(long, requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -127,13 +129,14 @@ pub enum Commands {
     },
 
     /// List versions of a secret in an Azure Key Vault.
+    #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     ListVersions {
         /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
-        #[arg(group = "ident", value_name = "URL")]
+        #[arg(value_name = "URL")]
         id: Option<Url>,
 
         /// The secret name.
-        #[arg(long, group = "ident", requires = "vault")]
+        #[arg(long, requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -187,7 +190,7 @@ impl Commands {
         let client = SecretClient::new(vault.as_str(), credential()?, None)?;
 
         let secret_attributes = SecretAttributes {
-            enabled: *enabled,
+            enabled: Some(*enabled),
             expires: *expires,
             not_before: *not_before,
             ..Default::default()
@@ -239,7 +242,7 @@ impl Commands {
         let client = SecretClient::new(&vault, credential()?, None)?;
 
         let secret_attributes = SecretAttributes {
-            enabled: *enabled,
+            enabled: Some(*enabled),
             expires: *expires,
             not_before: *not_before,
             ..Default::default()

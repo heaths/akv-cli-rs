@@ -8,8 +8,11 @@ use akv_cli::{
     Error, ErrorKind, Result,
 };
 use azure_core::http::Url;
-use azure_security_keyvault_keys::{models::KeyOperationParameters, KeyClient, ResourceId};
-use clap::Parser;
+use azure_security_keyvault_keys::{
+    models::{KeyClientWrapKeyOptions, KeyOperationParameters},
+    KeyClient,
+};
+use clap::{ArgGroup, Parser};
 use std::path::PathBuf;
 use tokio::{
     fs,
@@ -18,15 +21,17 @@ use tokio::{
 use tracing::{Level, Span};
 
 #[derive(Debug, Parser)]
+#[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
+#[command(group(ArgGroup::new("input").args(&["value", "in_file"]).required(true)))]
 pub struct Args {
     /// The key URL e.g., "https://my-vault.vault.azure.net/keys/my-key/version".
     ///
     /// The key URL must include a version.
-    #[arg(group = "ident", value_name = "URL")]
+    #[arg(value_name = "URL")]
     id: Option<Url>,
 
     /// The key name.
-    #[arg(long, group = "ident", requires_all = ["vault", "version"])]
+    #[arg(long, requires = "vault")]
     name: Option<String>,
 
     /// The key version.
@@ -46,13 +51,13 @@ pub struct Args {
     encryption: EncryptionAlgorithm,
 
     /// The content to encrypt.
-    #[arg(group = "input")]
+    #[arg(long)]
     value: Option<String>,
 
     /// The file to encrypt or "-" to read from stdin.
     ///
     /// If you pass "-" without piping data to stdin, you can type a message and press `Ctrl+D` to end the stream.
-    #[arg(short = 'i', long, group = "input", value_name = "PATH")]
+    #[arg(short = 'i', long, value_name = "PATH")]
     in_file: Option<PathBuf>,
 }
 
@@ -66,19 +71,16 @@ impl Args {
             self.version.as_ref(),
         ) {
             (Some(id), _, _, _) => {
-                let resource: ResourceId = id.try_into()?;
-                let version = resource.version.ok_or_else(|| {
-                    Error::with_message(ErrorKind::InvalidData, "key URL must include a version")
-                })?;
-                (resource.vault_url, resource.name, version)
+                let resource: super::Resource = id.try_into()?;
+                (resource.vault_url, resource.name, resource.version)
             }
-            (None, Some(vault), Some(name), Some(version)) => {
-                (vault.as_str().to_string(), name.clone(), version.clone())
+            (None, Some(vault), Some(name), version) => {
+                (vault.as_str().to_string(), name.clone(), version.cloned())
             }
             _ => {
                 return Err(Error::with_message(
                     ErrorKind::InvalidData,
-                    "specify a key URL or --name, --vault, and --version",
+                    "specify a key URL or --name, --vault, and optional --version",
                 ));
             }
         };
@@ -97,14 +99,16 @@ impl Args {
                 buf
             }
             (_, Some(in_file)) => fs::read(in_file).await?,
-            _ => panic!("inconceivable"),
+            _ => unreachable!(),
         };
 
         let kid = format!(
-            "{}/keys/{}/{version}",
+            "{}/keys/{}/{}",
             vault_url.trim_end_matches('/'),
-            name
+            name,
+            version.as_deref().unwrap_or_default(),
         );
+        let key_version = version.as_ref();
         let client = KeyClient::new(&vault_url, credential()?, None)?;
         let jwe = Jwe::encryptor()
             .alg(self.algorithm.clone())
@@ -118,7 +122,14 @@ impl Args {
                     ..Default::default()
                 };
                 client
-                    .wrap_key(&name, &version, params.try_into()?, None)
+                    .wrap_key(
+                        &name,
+                        params.try_into()?,
+                        Some(KeyClientWrapKeyOptions {
+                            key_version: key_version.cloned(),
+                            ..Default::default()
+                        }),
+                    )
                     .await?
                     .into_model()?
                     .try_into()

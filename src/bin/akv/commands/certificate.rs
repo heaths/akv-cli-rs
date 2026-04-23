@@ -20,7 +20,7 @@ use azure_security_keyvault_certificates::{
     },
     CertificateClient, ResourceExt as _, ResourceId,
 };
-use clap::{ArgAction, Subcommand, ValueEnum};
+use clap::{ArgAction, ArgGroup, Subcommand, ValueEnum};
 use futures::TryStreamExt as _;
 use indicatif::ProgressBar;
 use prettytable::{color, format, Attr, Cell, Row, Table};
@@ -96,13 +96,14 @@ pub enum Commands {
     },
 
     /// Edits a certificate in an Azure Key Vault.
+    #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     Edit {
         /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificate/my-certificate".
-        #[arg(group = "ident", value_name = "URL")]
+        #[arg(value_name = "URL")]
         id: Option<Url>,
 
         /// The certificate name.
-        #[arg(long, group = "ident", requires = "vault")]
+        #[arg(long, requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -123,13 +124,14 @@ pub enum Commands {
     },
 
     /// Edits the certificate policy for the next certificate request.
+    #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     EditPolicy {
         /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificate/my-certificate".
-        #[arg(group = "ident", value_name = "URL")]
+        #[arg(value_name = "URL")]
         id: Option<Url>,
 
         /// The certificate name.
-        #[arg(long, group = "ident", requires = "vault")]
+        #[arg(long, requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -178,13 +180,14 @@ pub enum Commands {
     },
 
     /// Gets information about a certificate in an Azure Key Vault.
+    #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     Get {
         /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificates/my-certificate".
-        #[arg(group = "ident", value_name = "URL")]
+        #[arg(value_name = "URL")]
         id: Option<Url>,
 
         /// The certificate name.
-        #[arg(long, group = "ident", requires = "vault")]
+        #[arg(long, requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -197,13 +200,14 @@ pub enum Commands {
     },
 
     /// Gets the certificate policy for the next version of a certificate created in an Azure Key Vault.
+    #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     GetPolicy {
         /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificates/my-certificate".
-        #[arg(group = "ident", value_name = "URL")]
+        #[arg(value_name = "URL")]
         id: Option<Url>,
 
         /// The certificate name.
-        #[arg(long, group = "ident", requires = "vault")]
+        #[arg(long, requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -227,13 +231,14 @@ pub enum Commands {
     },
 
     /// List versions of a certificate in an Azure Key Vault.
+    #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     ListVersions {
         /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificates/my-certificate".
-        #[arg(group = "ident", value_name = "URL")]
+        #[arg(value_name = "URL")]
         id: Option<Url>,
 
         /// The certificate name.
-        #[arg(long, group = "ident", requires = "vault")]
+        #[arg(long, requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -298,7 +303,7 @@ impl Commands {
         let client = CertificateClient::new(vault.as_str(), credential()?, None)?;
 
         let certificate_attributes = CertificateAttributes {
-            enabled: *enabled,
+            enabled: Some(*enabled),
             expires: *expires,
             not_before: *not_before,
             ..Default::default()
@@ -384,7 +389,7 @@ impl Commands {
         let client = CertificateClient::new(&vault, credential()?, None)?;
 
         let certificate_attributes = CertificateAttributes {
-            enabled: *enabled,
+            enabled: Some(*enabled),
             expires: *expires,
             not_before: *not_before,
             ..Default::default()
