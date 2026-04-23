@@ -6,7 +6,7 @@ use crate::credential;
 use akv_cli::Result;
 use azure_core::http::Url;
 use azure_security_keyvault_secrets::{models::SecretClientGetSecretOptions, SecretClient};
-use clap::Parser;
+use clap::{ArgGroup, Parser};
 use std::{
     fs,
     io::{self, Write},
@@ -15,13 +15,14 @@ use std::{
 use tracing::{Level, Span};
 
 #[derive(Debug, Parser)]
+#[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
 pub struct Args {
     /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
-    #[arg(group = "ident", value_name = "URL")]
+    #[arg(value_name = "URL")]
     id: Option<Url>,
 
     /// The secret name.
-    #[arg(long, group = "ident", requires = "vault")]
+    #[arg(long, requires = "vault")]
     name: Option<String>,
 
     /// The vault URL e.g., "https://my-vault.vault.azure.net".

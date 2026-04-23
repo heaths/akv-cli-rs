@@ -24,6 +24,7 @@
     "rustlang",
     "rustup",
     "symm",
+    "versionless",
     "worktree"
   ],
   "dictionaryDefinitions": [

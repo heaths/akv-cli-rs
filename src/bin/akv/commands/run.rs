@@ -3,9 +3,7 @@
 
 use crate::{credential, pty::CommandExt as _};
 use akv_cli::{cache::ClientCache, jose::Jwe, ErrorKind, Result};
-use azure_security_keyvault_keys::{
-    models::KeyOperationParameters, KeyClient, ResourceId as KeyResourceId,
-};
+use azure_security_keyvault_keys::{models::KeyOperationParameters, KeyClient};
 use azure_security_keyvault_secrets::{
     models::SecretClientGetSecretOptions, ResourceId as SecretResourceId, SecretClient,
 };
@@ -116,7 +114,7 @@ impl Args {
                 // Otherwise, decrypt the JWE and cache it by its compact form.
                 let plaintext = jwe
                     .decrypt(async |kid, alg, cek| {
-                        let KeyResourceId {
+                        let super::Resource {
                             vault_url,
                             name,
                             version,

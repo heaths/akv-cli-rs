@@ -7,6 +7,7 @@ use crate::{Error, ErrorKind, Result, ResultExt};
 use futures::future::BoxFuture;
 use std::{borrow::Cow, io, str::FromStr};
 use time::{format_description::well_known, OffsetDateTime};
+use url::Url;
 
 /// Parse an optional [`OffsetDateTime`] argument from `clap`.
 pub fn parse_date_time_opt(value: &str) -> Result<OffsetDateTime> {
@@ -138,10 +139,170 @@ where
     }
 }
 
+/// Represents secret, key, or certificate resources.
+#[derive(Clone, Debug)]
+pub struct Resource {
+    /// The containing vault URL e.g., "https://my-vault.vault.azure.net".
+    pub vault_url: String,
+
+    /// The name of the secret, key, or certificate resource.
+    pub name: String,
+
+    /// The optional version of the secret, key, or certificate resource.
+    pub version: Option<String>,
+}
+
+impl TryFrom<Url> for Resource {
+    type Error = crate::Error;
+
+    #[inline]
+    fn try_from(url: Url) -> std::result::Result<Self, Self::Error> {
+        Self::try_from(&url)
+    }
+}
+
+impl TryFrom<&Url> for Resource {
+    type Error = crate::Error;
+
+    fn try_from(url: &Url) -> std::result::Result<Self, Self::Error> {
+        Ok(azure_security_keyvault_secrets::ResourceId::try_from(url)
+            .map(From::from)
+            .or_else(|_| azure_security_keyvault_keys::ResourceId::try_from(url).map(From::from))
+            .or_else(|_| {
+                azure_security_keyvault_certificates::ResourceId::try_from(url).map(From::from)
+            })?)
+    }
+}
+
+impl From<azure_security_keyvault_secrets::ResourceId> for Resource {
+    fn from(value: azure_security_keyvault_secrets::ResourceId) -> Self {
+        Self {
+            vault_url: value.vault_url,
+            name: value.name,
+            version: value.version,
+        }
+    }
+}
+
+impl From<azure_security_keyvault_keys::ResourceId> for Resource {
+    fn from(value: azure_security_keyvault_keys::ResourceId) -> Self {
+        Self {
+            vault_url: value.vault_url,
+            name: value.name,
+            version: value.version,
+        }
+    }
+}
+
+impl From<azure_security_keyvault_certificates::ResourceId> for Resource {
+    fn from(value: azure_security_keyvault_certificates::ResourceId) -> Self {
+        Self {
+            vault_url: value.vault_url,
+            name: value.name,
+            version: value.version,
+        }
+    }
+}
+
+impl FromStr for Resource {
+    type Err = crate::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let url: Url = s.parse()?;
+        url.try_into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use futures::FutureExt as _;
+
+    #[test]
+    fn resource_from_secret_url() {
+        let url: Url = "https://my-vault.vault.azure.net/secrets/my-secret"
+            .parse()
+            .unwrap();
+        let resource = Resource::try_from(url).expect("valid secret URL");
+        assert_eq!(resource.vault_url, "https://my-vault.vault.azure.net");
+        assert_eq!(resource.name, "my-secret");
+        assert!(resource.version.is_none());
+    }
+
+    #[test]
+    fn resource_from_secret_url_with_version() {
+        let url: Url =
+            "https://my-vault.vault.azure.net/secrets/my-secret/746984e474594896aad9aff48aca0849"
+                .parse()
+                .unwrap();
+        let resource = Resource::try_from(url).expect("valid secret URL with version");
+        assert_eq!(resource.vault_url, "https://my-vault.vault.azure.net");
+        assert_eq!(resource.name, "my-secret");
+        assert_eq!(
+            resource.version.as_deref(),
+            Some("746984e474594896aad9aff48aca0849")
+        );
+    }
+
+    #[test]
+    fn resource_from_key_url() {
+        let url: Url = "https://my-vault.vault.azure.net/keys/my-key"
+            .parse()
+            .unwrap();
+        let resource = Resource::try_from(url).expect("valid key URL");
+        assert_eq!(resource.vault_url, "https://my-vault.vault.azure.net");
+        assert_eq!(resource.name, "my-key");
+        assert!(resource.version.is_none());
+    }
+
+    #[test]
+    fn resource_from_key_url_with_version() {
+        let url: Url = "https://my-vault.vault.azure.net/keys/my-key/1234567890abcdef"
+            .parse()
+            .unwrap();
+        let resource = Resource::try_from(url).expect("valid key URL with version");
+        assert_eq!(resource.vault_url, "https://my-vault.vault.azure.net");
+        assert_eq!(resource.name, "my-key");
+        assert_eq!(resource.version.as_deref(), Some("1234567890abcdef"));
+    }
+
+    #[test]
+    fn resource_from_certificate_url() {
+        let url: Url = "https://my-vault.vault.azure.net/certificates/my-cert"
+            .parse()
+            .unwrap();
+        let resource = Resource::try_from(url).expect("valid certificate URL");
+        assert_eq!(resource.vault_url, "https://my-vault.vault.azure.net");
+        assert_eq!(resource.name, "my-cert");
+        assert!(resource.version.is_none());
+    }
+
+    #[test]
+    fn resource_from_certificate_url_with_version() {
+        let url: Url = "https://my-vault.vault.azure.net/certificates/my-cert/abcdef1234567890"
+            .parse()
+            .unwrap();
+        let resource = Resource::try_from(url).expect("valid certificate URL with version");
+        assert_eq!(resource.vault_url, "https://my-vault.vault.azure.net");
+        assert_eq!(resource.name, "my-cert");
+        assert_eq!(resource.version.as_deref(), Some("abcdef1234567890"));
+    }
+
+    #[test]
+    fn resource_from_str() {
+        let resource: Resource = "https://my-vault.vault.azure.net/secrets/my-secret"
+            .parse()
+            .expect("valid secret URL string");
+        assert_eq!(resource.vault_url, "https://my-vault.vault.azure.net");
+        assert_eq!(resource.name, "my-secret");
+        assert!(resource.version.is_none());
+    }
+
+    #[test]
+    fn resource_from_invalid_url() {
+        let url: Url = "https://my-vault.vault.azure.net".parse().unwrap();
+        Resource::try_from(url).expect_err("vault URL without resource path should fail");
+    }
 
     #[test]
     fn test_parse_key_value() {

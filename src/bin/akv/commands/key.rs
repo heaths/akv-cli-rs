@@ -18,7 +18,7 @@ use azure_security_keyvault_keys::{
 };
 use clap::{
     builder::{PossibleValue, TypedValueParser, ValueParserFactory},
-    Subcommand, ValueEnum,
+    ArgGroup, Subcommand, ValueEnum,
 };
 use futures::{future, TryStreamExt as _};
 use prettytable::{color, format, Attr, Cell, Row, Table};
@@ -70,13 +70,14 @@ pub enum Commands {
     },
 
     /// Edits a key in an Azure Key Vault.
+    #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     Edit {
         /// The key URL e.g., "https://my-vault.vault.azure.net/keys/my-key".
-        #[arg(group = "ident", value_name = "URL")]
+        #[arg(value_name = "URL")]
         id: Option<Url>,
 
         /// The key name.
-        #[arg(long, group = "ident", requires = "vault")]
+        #[arg(long, requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -101,13 +102,14 @@ pub enum Commands {
     },
 
     /// Gets information about a key in an Azure Key Vault.
+    #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     Get {
         /// The key URL e.g., "https://my-vault.vault.azure.net/keys/my-key".
-        #[arg(group = "ident", value_name = "URL")]
+        #[arg(value_name = "URL")]
         id: Option<Url>,
 
         /// The key name.
-        #[arg(long, group = "ident", requires = "vault")]
+        #[arg(long, requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -139,13 +141,14 @@ pub enum Commands {
     },
 
     /// List versions of a key in an Azure Key Vault.
+    #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     ListVersions {
         /// The key URL e.g., "https://my-vault.vault.azure.net/keys/my-key".
-        #[arg(group = "ident", value_name = "URL")]
+        #[arg(value_name = "URL")]
         id: Option<Url>,
 
         /// The key name.
-        #[arg(long, group = "ident", requires = "vault")]
+        #[arg(long, requires = "vault")]
         name: Option<String>,
 
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
@@ -202,7 +205,7 @@ impl Commands {
         let client = KeyClient::new(vault.as_str(), credential()?, None)?;
 
         let key_attributes = KeyAttributes {
-            enabled: *enabled,
+            enabled: Some(*enabled),
             expires: *expires,
             not_before: *not_before,
             ..Default::default()
@@ -257,7 +260,7 @@ impl Commands {
         let client = KeyClient::new(&vault, credential()?, None)?;
 
         let key_attributes = KeyAttributes {
-            enabled: *enabled,
+            enabled: Some(*enabled),
             expires: *expires,
             not_before: *not_before,
             ..Default::default()
