@@ -181,16 +181,14 @@ Describe 'Certificates' {
 
         # Create certificate (polls until ready, may take ~30s).
         # JSON output: versioned URL is at .id.
-        & $script:akv certificate create --name $script:certName --vault $script:AZURE_KEYVAULT_URL --type ec --curve p256 --output json | Out-Null
-
-        # JSON output does not have ID. Use name to get managed key ID.
-        $key = & $script:akv key get --name $script:certName --vault $script:AZURE_KEYVAULT_URL --output json | ConvertFrom-Json
-        $script:certV1Url = $key.key.kid -replace '/keys/', '/certificates/'
+        $v1 = & $script:akv certificate create --name $script:certName --vault $script:AZURE_KEYVAULT_URL --type ec --curve p256 --output json | ConvertFrom-Json
+        $script:certV1Url = $v1.id
     }
 
     It 'edits a certificate using URL form' {
         $result = & $script:akv certificate edit $script:certV1Url --tags env=test --output json | ConvertFrom-Json
         $LASTEXITCODE | Should -Be 0
+        $result.id | Should -Match "/certificates/${script:certName}/"
         $result.tags | Should -Not -BeNullOrEmpty
         $result.tags.env | Should -Be 'test'
     }
@@ -198,6 +196,7 @@ Describe 'Certificates' {
     It 'edits a certificate using --name' {
         $result = & $script:akv certificate edit --name $script:certName --vault $script:AZURE_KEYVAULT_URL --tags env=test --output json | ConvertFrom-Json
         $LASTEXITCODE | Should -Be 0
+        $result.id | Should -Match "/certificates/${script:certName}/"
         $result.tags | Should -Not -BeNullOrEmpty
         $result.tags.env | Should -Be 'test'
     }
@@ -217,6 +216,7 @@ Describe 'Certificates' {
     It 'gets a versioned certificate using URL form' {
         $result = & $script:akv certificate get $script:certV1Url --output json | ConvertFrom-Json
         $LASTEXITCODE | Should -Be 0
+        $result.id | Should -Be $script:certV1Url
         $result.cer | Should -Not -BeNullOrEmpty
     }
 
@@ -224,6 +224,7 @@ Describe 'Certificates' {
         $versionlessUrl = "${script:AZURE_KEYVAULT_URL}/certificates/${script:certName}"
         $result = & $script:akv certificate get $versionlessUrl --output json | ConvertFrom-Json
         $LASTEXITCODE | Should -Be 0
+        $result.id | Should -Match "/certificates/${script:certName}/"
         $result.tags | Should -Not -BeNullOrEmpty
         $result.tags.env | Should -Be 'test'
     }
@@ -231,6 +232,7 @@ Describe 'Certificates' {
     It 'gets the latest certificate using --name' {
         $result = & $script:akv certificate get --name $script:certName --vault $script:AZURE_KEYVAULT_URL --output json | ConvertFrom-Json
         $LASTEXITCODE | Should -Be 0
+        $result.id | Should -Match "/certificates/${script:certName}/"
         $result.tags | Should -Not -BeNullOrEmpty
         $result.tags.env | Should -Be 'test'
     }

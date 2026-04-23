@@ -1,7 +1,7 @@
 // Copyright 2025 Heath Stewart.
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
-use super::{elapsed, VAULT_ENV_NAME};
+use super::{elapsed, models, VAULT_ENV_NAME};
 use crate::{
     commands::{map_tags, map_vec, AttributeArgs, IsDefault, OutputFormat},
     credential, TableExt,
@@ -226,7 +226,7 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(&key, global_args.color()),
+            OutputFormat::Json => json::print(&models::Key::from(key), global_args.color()),
             OutputFormat::Default => show(&key),
         }
     }
@@ -285,7 +285,7 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(&key, global_args.color()),
+            OutputFormat::Json => json::print(&models::Key::from(key), global_args.color()),
             OutputFormat::Default => show(&key),
         }
     }
@@ -321,7 +321,7 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(&key, global_args.color()),
+            OutputFormat::Json => json::print(&models::Key::from(key), global_args.color()),
             OutputFormat::Default => show(&key),
         }
     }
