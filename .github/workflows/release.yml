@@ -151,3 +151,11 @@ jobs:
       run: gh release edit '${{ github.ref_name }}' --draft=false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  brew:
+    needs: release
+    uses: ./.github/workflows/brew.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets:
+      HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
