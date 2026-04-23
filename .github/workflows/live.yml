@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       clean:
-        description: Whether to delete and purge resources
+        description: Delete resources
         required: false
         type: boolean
         default: false
