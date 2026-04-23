@@ -263,6 +263,7 @@ pub struct SubjectAlternativeNames {
     pub ip_addresses: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uris: Option<Vec<String>>,
+    // cspell:ignore "upns"
     #[serde(rename = "upns", skip_serializing_if = "Option::is_none")]
     pub user_principal_names: Option<Vec<String>>,
 }
@@ -281,6 +282,7 @@ impl From<sdk::SubjectAlternativeNames> for SubjectAlternativeNames {
 
 #[derive(Clone, Default, Debug, Deserialize, Serialize)]
 pub struct X509CertificateProperties {
+    // cspell:ignore ekus
     #[serde(rename = "ekus", skip_serializing_if = "Option::is_none")]
     pub enhanced_key_usage: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
