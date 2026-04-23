@@ -344,16 +344,28 @@ impl Commands {
         spinner.finish_and_clear();
 
         let ResourceId { name, version, .. } = certificate.resource_id()?;
-        let certificate = client
+        let mut certificate = client
             .get_certificate(
                 &name,
                 Some(CertificateClientGetCertificateOptions {
-                    certificate_version: version,
+                    certificate_version: version.clone(),
                     ..Default::default()
                 }),
             )
             .await?
             .into_model()?;
+
+        if certificate.id.is_none() {
+            let id = format!(
+                "{}/certificates/{}",
+                vault.as_str().trim_end_matches('/'),
+                name
+            );
+            certificate.id = Some(match version.as_deref() {
+                Some(v) => format!("{}/{}", id, v),
+                None => id,
+            });
+        }
 
         match output {
             OutputFormat::Json => json::print(&certificate, global_args.color()),
@@ -400,17 +412,25 @@ impl Commands {
             ..Default::default()
         };
 
-        let certificate = client
+        let mut certificate = client
             .update_certificate_properties(
                 &name,
                 params.try_into()?,
                 Some(CertificateClientUpdateCertificatePropertiesOptions {
-                    certificate_version: version.map(Into::into),
+                    certificate_version: version.as_deref().map(str::to_string),
                     ..Default::default()
                 }),
             )
             .await?
             .into_model()?;
+
+        if certificate.id.is_none() {
+            let id = format!("{}/certificates/{}", vault.trim_end_matches('/'), &name);
+            certificate.id = Some(match version.as_deref() {
+                Some(v) => format!("{}/{}", id, v),
+                None => id,
+            });
+        }
 
         match output {
             OutputFormat::Json => json::print(&certificate, global_args.color()),
@@ -514,16 +534,24 @@ impl Commands {
         current.record("version", version.as_deref());
 
         let client = CertificateClient::new(&vault, credential()?, None)?;
-        let certificate = client
+        let mut certificate = client
             .get_certificate(
                 &name,
                 Some(CertificateClientGetCertificateOptions {
-                    certificate_version: version.map(Into::into),
+                    certificate_version: version.as_deref().map(str::to_string),
                     ..Default::default()
                 }),
             )
             .await?
             .into_model()?;
+
+        if certificate.id.is_none() {
+            let id = format!("{}/certificates/{}", vault.trim_end_matches('/'), &name);
+            certificate.id = Some(match version.as_deref() {
+                Some(v) => format!("{}/{}", id, v),
+                None => id,
+            });
+        }
 
         match output {
             OutputFormat::Json => json::print(&certificate, global_args.color()),
