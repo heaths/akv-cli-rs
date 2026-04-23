@@ -344,6 +344,7 @@ impl Commands {
         spinner.finish_and_clear();
 
         let ResourceId { name, version, .. } = certificate.resource_id()?;
+        let vault = vault.as_str();
         let mut certificate = client
             .get_certificate(
                 &name,
@@ -356,11 +357,7 @@ impl Commands {
             .into_model()?;
 
         if certificate.id.is_none() {
-            let id = format!(
-                "{}/certificates/{}",
-                vault.as_str().trim_end_matches('/'),
-                name
-            );
+            let id = format!("{}/certificates/{}", vault.trim_end_matches('/'), &name);
             certificate.id = Some(match version.as_deref() {
                 Some(v) => format!("{}/{}", id, v),
                 None => id,
