@@ -2,9 +2,6 @@
   "lspServers": {
     "rust-analyzer": {
       "command": "rust-analyzer",
-      "args": [
-        "--stdio"
-      ],
       "fileExtensions": {
         ".rs": "rust"
       },
@@ -18,7 +15,8 @@
         "procMacro": {
           "enable": true
         },
-        "checkOnSave": {
+        "checkOnSave": true,
+        "check": {
           "command": "clippy"
         }
       }
