@@ -3,6 +3,11 @@ name: live
 on:
   workflow_dispatch:
     inputs:
+      release:
+        description: Build release
+        required: false
+        type: boolean
+        default: false
       clean:
         description: Delete resources
         required: false
@@ -57,7 +62,12 @@ jobs:
     - name: Provision
       run: azd provision --no-prompt
     - name: Test
-      run: Invoke-Pester tests/test.ps1 -Output Detailed
+      run: |
+        $config = New-PesterConfiguration
+        $config.Run.Path = 'tests/'
+        $config.Run.ScriptParameters = @{ Release = ('${{ inputs.release }}' -eq 'true') }
+        $config.Output.Verbosity = 'Detailed'
+        Invoke-Pester -Configuration $config
       shell: pwsh
     - name: Clean
       if: inputs.clean
