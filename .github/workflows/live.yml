@@ -69,11 +69,12 @@ jobs:
     - name: Test
       run: |
         Import-Module Pester -RequiredVersion 5.6.1
+        $container = New-PesterContainer -Path './tests/' -Data @{ Release = ('${{ inputs.release }}' -eq 'true') }
         $config = New-PesterConfiguration
-        $config.Run.Path = 'tests/'
-        $config.Run.Parameters = @{ Release = ('${{ inputs.release }}' -eq 'true') }
+        $config.Run.Container = $container
+        $config.Exit = $true
         $config.Output.Verbosity = 'Detailed'
-        Invoke-Pester -Configuration $config
+        $config.TestResult.Enabled = $true
       shell: pwsh
     - name: Clean
       if: inputs.clean

@@ -5,9 +5,9 @@
 
 # Run with: Invoke-Pester tests/Secrets.Tests.ps1
 # Pass -Release to test a release build:
+#   $container = New-PesterContainer -Path ./tests/Secrets.Tests.ps1 -Data @{ Release = $true }
 #   $config = New-PesterConfiguration
-#   $config.Run.Path = 'tests/Secrets.Tests.ps1'
-#   $config.Run.ScriptParameters = @{ Release = $true }
+#   $config.Run.Container = $container
 #   Invoke-Pester -Configuration $config
 #
 # Requires a provisioned Key Vault via `azd up` or AZURE_KEYVAULT_URL set in the environment.
