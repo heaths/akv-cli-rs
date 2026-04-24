@@ -31,7 +31,7 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     - name: Install azd
       uses: Azure/setup-azd@v2
     - name: Install Pester
@@ -52,7 +52,7 @@ jobs:
     - name: Set up toolchain
       run: rustup install
     - name: Authentication az (OIDC)
-      uses: azure/login@v2
+      uses: azure/login@v3
       with:
         client-id: ${{ vars.AZURE_CLIENT_ID }}
         tenant-id: ${{ vars.AZURE_TENANT_ID }}
