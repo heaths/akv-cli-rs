@@ -51,7 +51,7 @@ jobs:
         key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Set up toolchain
       run: rustup install
-    - name: Authentication az (OIDC)
+    - name: Authenticate az (OIDC)
       uses: azure/login@v3
       with:
         client-id: ${{ vars.AZURE_CLIENT_ID }}
@@ -72,10 +72,20 @@ jobs:
         $container = New-PesterContainer -Path './tests/' -Data @{ Release = ('${{ inputs.release }}' -eq 'true') }
         $config = New-PesterConfiguration
         $config.Run.Container = $container
-        $config.Exit = $true
+        $config.Run.Exit = $true
         $config.Output.Verbosity = 'Detailed'
         $config.TestResult.Enabled = $true
+        $config.TestResult.OutputFormat = 'JUnitXml'
+        $config.TestResult.OutputPath = './tests/testResults.xml'
+        Invoke-Pester -Configuration $config
       shell: pwsh
     - name: Clean
-      if: inputs.clean
+      if: ${{ inputs.clean && !cancelled() }}
+      continue-on-error: true
       run: azd down --force --purge --no-prompt
+    - name: Summarize tests
+      uses: test-summary/action@v2
+      if: always()
+      with:
+        paths: |
+          ./tests/*.xml
