@@ -84,7 +84,7 @@ jobs:
         echo "name=akv${{ matrix.extension }}" | tee -a "$GITHUB_OUTPUT"
         echo "target=target/release/akv${{ matrix.extension }}" | tee -a "$GITHUB_OUTPUT"
     - name: Attest executable
-      uses: actions/attest-build-provenance@v2
+      uses: actions/attest-build-provenance@v4
       with:
         subject-path: ${{ steps.build.outputs.target }}
     - name: Package
@@ -104,7 +104,7 @@ jobs:
         "name=$name" >> $env:GITHUB_OUTPUT
         "target=$target" >> $env:GITHUB_OUTPUT
     - name: Upload
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ steps.package.outputs.name }}
         path: ${{ steps.package.outputs.target }}
@@ -118,9 +118,9 @@ jobs:
     needs: package
     steps:
     - name: Download
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
     - name: Attest
-      uses: actions/attest-build-provenance@v2
+      uses: actions/attest-build-provenance@v4
       with:
         subject-path: ${{ github.workspace }}/*
 
@@ -128,6 +128,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: package
+    environment: crates-io
     steps:
     - name: Checkout
       uses: actions/checkout@v6
@@ -135,7 +136,7 @@ jobs:
       run: rustup install
     - name: Authenticate with crates.io
       id: auth
-      uses: rust-lang/crates-io-auth-action@v1
+      uses: rust-lang/crates-io-auth-action@v1.0.4
     - name: Publish
       run: cargo publish
       env:

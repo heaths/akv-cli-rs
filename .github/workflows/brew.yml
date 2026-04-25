@@ -31,6 +31,9 @@ env:
 jobs:
   bump-formula:
     runs-on: ubuntu-latest
+    environment:
+      name: homebrew
+      url: ${{ steps.bump.outputs.pullRequest }}
     steps:
     - name: Get user info
       id: user
@@ -38,15 +41,21 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
     - name: Run brew bump-formula-pr
+      id: bump
       # According to https://github.com/actions/runner-images?tab=readme-ov-file#available-images,
       # Linuxbrew is already installed on ubuntu-latest.
       run: |
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
         brew tap '${{ env.BREW_TAP }}'
-        brew bump-formula-pr --no-browse --url '${{ env.TARBALL_URL }}' '${{ env.BREW_TAP }}/${{ env.BREW_FORMULA }}'
+        pullRequest=$(brew bump-formula-pr --no-browse --url '${{ env.TARBALL_URL }}' '${{ env.BREW_TAP }}/${{ env.BREW_FORMULA }}' | tail -1)
+        echo "pullRequest=$pullRequest" >> "$GITHUB_OUTPUT"
       env:
         HOMEBREW_GIT_NAME: ${{ steps.user.outputs.name }}
         HOMEBREW_GIT_EMAIL: ${{ steps.user.outputs.email }}
         # https://github.com/settings/tokens/new?scopes=repo&description=Homebrew
         HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
         TARBALL_URL: ${{ github.server_url }}/${{ github.repository }}/archive/${{ format('refs/tags/{0}', inputs.tag) || github.ref }}.tar.gz
+    - name: Summarize
+      run: |
+        echo "### Review formula update 👀" >> "$GITHUB_STEP_SUMMARY"
+        echo "${{ steps.bump.outputs.pullRequest }}" >> "$GITHUB_STEP_SUMMARY"
