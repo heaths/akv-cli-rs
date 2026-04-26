@@ -18,7 +18,7 @@ use tracing::{Level, Span};
 #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
 pub struct Args {
     /// The secret URL e.g., "https://my-vault.vault.azure.net/secrets/my-secret".
-    #[arg(value_name = "URL")]
+    #[arg(value_name = "URL", conflicts_with_all = ["name", "version"])]
     id: Option<Url>,
 
     /// The secret name.
@@ -28,6 +28,10 @@ pub struct Args {
     /// The vault URL e.g., "https://my-vault.vault.azure.net".
     #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
     vault: Option<Url>,
+
+    /// Optional secrets version.
+    #[arg(long, requires = "name")]
+    version: Option<String>,
 
     /// Do not print a new line after the secret.
     #[arg(short = 'n', long)]
@@ -45,8 +49,12 @@ pub struct Args {
 impl Args {
     #[tracing::instrument(level = Level::INFO, skip(self), fields(vault, name, version), err)]
     pub async fn read(&self) -> Result<()> {
-        let (vault, name, version) =
-            super::select(self.id.as_ref(), self.vault.as_ref(), self.name.as_ref())?;
+        let (vault, name, version) = super::select(
+            self.id.as_ref(),
+            self.vault.as_ref(),
+            self.name.as_ref(),
+            self.version.as_ref(),
+        )?;
 
         let current = Span::current();
         current.record("vault", &*vault);

@@ -59,6 +59,25 @@ Describe 'Secrets' -Tag 'Secrets' {
         $script:secretV2Url = $v2.id
     }
 
+    Context 'Args' -Tag 'Args' {
+        It 'rejects URL with --name' {
+            & $script:akv secret get $script:secretV1Url --name $script:secretName 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+
+        It 'rejects URL with --version' {
+            $version = $script:secretV1Url.Split('/')[-1]
+            & $script:akv secret get $script:secretV1Url --version $version 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+
+        It 'rejects --version without --name' {
+            $version = $script:secretV1Url.Split('/')[-1]
+            & $script:akv secret get --vault $script:AZURE_KEYVAULT_URL --version $version 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+    }
+
     Context 'Select by URL' -Tag 'URL' {
         It 'edits a secret using URL form' {
             $result = & $script:akv secret edit $script:secretV1Url --tags env=test --output json | ConvertFrom-Json
@@ -99,6 +118,13 @@ Describe 'Secrets' -Tag 'Secrets' {
             $result.id | Should -Match "/secrets/${script:secretName}/"
         }
 
+        It 'edits a versioned secret using --name and --version' {
+            $version = $script:secretV1Url.Split('/')[-1]
+            $result = & $script:akv secret edit --name $script:secretName --vault $script:AZURE_KEYVAULT_URL --version $version --tags env=test --output json | ConvertFrom-Json
+            $LASTEXITCODE | Should -Be 0
+            $result.id | Should -Be $script:secretV1Url
+        }
+
         It 'lists versions using --name' {
             $versions = & $script:akv secret list-versions --name $script:secretName --vault $script:AZURE_KEYVAULT_URL --output json | ConvertFrom-Json
             $LASTEXITCODE | Should -Be 0
@@ -111,6 +137,13 @@ Describe 'Secrets' -Tag 'Secrets' {
             $LASTEXITCODE | Should -Be 0
             $result.id | Should -Match "/secrets/${script:secretName}/"
             $result.id | Should -Not -Be $script:secretV1Url
+        }
+
+        It 'gets a versioned secret using --name and --version' {
+            $version = $script:secretV1Url.Split('/')[-1]
+            $result = & $script:akv secret get --name $script:secretName --vault $script:AZURE_KEYVAULT_URL --version $version --output json | ConvertFrom-Json
+            $LASTEXITCODE | Should -Be 0
+            $result.id | Should -Be $script:secretV1Url
         }
 
         It 'reads the latest secret using --name' {

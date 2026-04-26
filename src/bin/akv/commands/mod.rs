@@ -159,6 +159,7 @@ fn select<'a>(
     id: Option<&Url>,
     vault: Option<&'a Url>,
     name: Option<&'a String>,
+    version: Option<&'a String>,
 ) -> akv_cli::Result<(Cow<'a, str>, Cow<'a, str>, Option<Cow<'a, str>>)> {
     match (id, vault, name) {
         (Some(id), _, None) => {
@@ -169,9 +170,11 @@ fn select<'a>(
                 resource.version.map(Cow::Owned),
             ))
         }
-        (None, Some(vault), Some(name)) => {
-            Ok((Cow::Borrowed(vault.as_str()), Cow::Borrowed(name), None))
-        }
+        (None, Some(vault), Some(name)) => Ok((
+            Cow::Borrowed(vault.as_str()),
+            Cow::Borrowed(name),
+            version.map(|v| Cow::Borrowed(v.as_str())),
+        )),
         _ => Err(akv_cli::Error::with_message(
             ErrorKind::InvalidData,
             "invalid arguments",

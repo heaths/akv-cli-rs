@@ -56,6 +56,25 @@ Describe 'Certificates' -Tag 'Certificates' {
         $script:certV1Url = $v1.id
     }
 
+    Context 'Args' -Tag 'Args' {
+        It 'rejects URL with --name' {
+            & $script:akv certificate get $script:certV1Url --name $script:certName 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+
+        It 'rejects URL with --version' {
+            $version = $script:certV1Url.Split('/')[-1]
+            & $script:akv certificate get $script:certV1Url --version $version 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+
+        It 'rejects --version without --name' {
+            $version = $script:certV1Url.Split('/')[-1]
+            & $script:akv certificate get --vault $script:AZURE_KEYVAULT_URL --version $version 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+    }
+
     Context 'Select by URL' -Tag 'URL' {
         It 'edits a certificate using URL form' {
             $result = & $script:akv certificate edit $script:certV1Url --tags env=test --output json | ConvertFrom-Json
@@ -97,6 +116,15 @@ Describe 'Certificates' -Tag 'Certificates' {
             $result.tags.env | Should -Be 'test'
         }
 
+        It 'edits a versioned certificate using --name and --version' {
+            $version = $script:certV1Url.Split('/')[-1]
+            $result = & $script:akv certificate edit --name $script:certName --vault $script:AZURE_KEYVAULT_URL --version $version --tags env=test --output json | ConvertFrom-Json
+            $LASTEXITCODE | Should -Be 0
+            $result.id | Should -Be $script:certV1Url
+            $result.tags | Should -Not -BeNullOrEmpty
+            $result.tags.env | Should -Be 'test'
+        }
+
         It 'lists versions using --name' {
             $versions = & $script:akv certificate list-versions --name $script:certName --vault $script:AZURE_KEYVAULT_URL --output json | ConvertFrom-Json
             $LASTEXITCODE | Should -Be 0
@@ -109,6 +137,14 @@ Describe 'Certificates' -Tag 'Certificates' {
             $result.id | Should -Match "/certificates/${script:certName}/"
             $result.tags | Should -Not -BeNullOrEmpty
             $result.tags.env | Should -Be 'test'
+        }
+
+        It 'gets a versioned certificate using --name and --version' {
+            $version = $script:certV1Url.Split('/')[-1]
+            $result = & $script:akv certificate get --name $script:certName --vault $script:AZURE_KEYVAULT_URL --version $version --output json | ConvertFrom-Json
+            $LASTEXITCODE | Should -Be 0
+            $result.id | Should -Be $script:certV1Url
+            $result.cer | Should -Not -BeNullOrEmpty
         }
     }
 }

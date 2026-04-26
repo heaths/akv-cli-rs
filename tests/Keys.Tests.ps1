@@ -58,6 +58,25 @@ Describe 'Keys' -Tag 'Keys' {
         & $script:akv key create --name $script:keyName --vault $script:AZURE_KEYVAULT_URL --type rsa --size 2048 | Out-Null
     }
 
+    Context 'Args' -Tag 'Args' {
+        It 'rejects URL with --name' {
+            & $script:akv key get $script:keyV1Url --name $script:keyName 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+
+        It 'rejects URL with --version' {
+            $version = $script:keyV1Url.Split('/')[-1]
+            & $script:akv key get $script:keyV1Url --version $version 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+
+        It 'rejects --version without --name' {
+            $version = $script:keyV1Url.Split('/')[-1]
+            & $script:akv key get --vault $script:AZURE_KEYVAULT_URL --version $version 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+    }
+
     Context 'Select by URL' -Tag 'URL' {
         It 'edits a key using URL form' {
             $result = & $script:akv key edit $script:keyV1Url --tags env=test --output json | ConvertFrom-Json
@@ -92,6 +111,13 @@ Describe 'Keys' -Tag 'Keys' {
             $result.key.kid | Should -Match "/keys/${script:keyName}/"
         }
 
+        It 'edits a versioned key using --name and --version' {
+            $version = $script:keyV1Url.Split('/')[-1]
+            $result = & $script:akv key edit --name $script:keyName --vault $script:AZURE_KEYVAULT_URL --version $version --tags env=test --output json | ConvertFrom-Json
+            $LASTEXITCODE | Should -Be 0
+            $result.key.kid | Should -Be $script:keyV1Url
+        }
+
         It 'lists versions using --name' {
             $versions = & $script:akv key list-versions --name $script:keyName --vault $script:AZURE_KEYVAULT_URL --output json | ConvertFrom-Json
             $LASTEXITCODE | Should -Be 0
@@ -103,6 +129,13 @@ Describe 'Keys' -Tag 'Keys' {
             $LASTEXITCODE | Should -Be 0
             $result.key.kid | Should -Match "/keys/${script:keyName}/"
             $result.key.kid | Should -Not -Be $script:keyV1Url
+        }
+
+        It 'gets a versioned key using --name and --version' {
+            $version = $script:keyV1Url.Split('/')[-1]
+            $result = & $script:akv key get --name $script:keyName --vault $script:AZURE_KEYVAULT_URL --version $version --output json | ConvertFrom-Json
+            $LASTEXITCODE | Should -Be 0
+            $result.key.kid | Should -Be $script:keyV1Url
         }
     }
 }
