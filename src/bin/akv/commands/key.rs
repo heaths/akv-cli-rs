@@ -73,7 +73,7 @@ pub enum Commands {
     #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     Edit {
         /// The key URL e.g., "https://my-vault.vault.azure.net/keys/my-key".
-        #[arg(value_name = "URL")]
+        #[arg(value_name = "URL", conflicts_with_all = ["name", "version"])]
         id: Option<Url>,
 
         /// The key name.
@@ -83,6 +83,10 @@ pub enum Commands {
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
         #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Option<Url>,
+
+        /// Optional keys version.
+        #[arg(long, requires = "name")]
+        version: Option<String>,
 
         /// The operations permitted for this key.
         #[arg(long, value_enum, value_delimiter = ',')]
@@ -105,7 +109,7 @@ pub enum Commands {
     #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     Get {
         /// The key URL e.g., "https://my-vault.vault.azure.net/keys/my-key".
-        #[arg(value_name = "URL")]
+        #[arg(value_name = "URL", conflicts_with_all = ["name", "version"])]
         id: Option<Url>,
 
         /// The key name.
@@ -115,6 +119,10 @@ pub enum Commands {
         /// The vault URL e.g., "https://my-vault.vault.azure.net".
         #[arg(long, value_name = "URL", env = VAULT_ENV_NAME)]
         vault: Option<Url>,
+
+        /// Optional keys version.
+        #[arg(long, requires = "name")]
+        version: Option<String>,
 
         /// Output format.
         #[arg(short = 'o', long, value_enum, default_value_t)]
@@ -237,6 +245,7 @@ impl Commands {
             id,
             vault,
             name,
+            version,
             operations,
             attributes:
                 AttributeArgs {
@@ -251,7 +260,8 @@ impl Commands {
             panic!("invalid command");
         };
 
-        let (vault, name, version) = super::select(id.as_ref(), vault.as_ref(), name.as_ref())?;
+        let (vault, name, version) =
+            super::select(id.as_ref(), vault.as_ref(), name.as_ref(), version.as_ref())?;
         let current = Span::current();
         current.record("vault", &*vault);
         current.record("name", &*name);
@@ -296,13 +306,15 @@ impl Commands {
             id,
             name,
             vault,
+            version,
             output,
         } = self
         else {
             panic!("invalid command");
         };
 
-        let (vault, name, version) = super::select(id.as_ref(), vault.as_ref(), name.as_ref())?;
+        let (vault, name, version) =
+            super::select(id.as_ref(), vault.as_ref(), name.as_ref(), version.as_ref())?;
         let current = Span::current();
         current.record("vault", &*vault);
         current.record("name", &*name);
@@ -414,7 +426,8 @@ impl Commands {
             panic!("invalid command");
         };
 
-        let (vault, name, version) = super::select(id.as_ref(), vault.as_ref(), name.as_ref())?;
+        let (vault, name, version) =
+            super::select(id.as_ref(), vault.as_ref(), name.as_ref(), None)?;
         let current = Span::current();
         current.record("vault", &*vault);
         current.record("name", &*name);

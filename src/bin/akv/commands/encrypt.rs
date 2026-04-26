@@ -27,7 +27,7 @@ pub struct Args {
     /// The key URL e.g., "https://my-vault.vault.azure.net/keys/my-key/version".
     ///
     /// The key URL must include a version.
-    #[arg(value_name = "URL")]
+    #[arg(value_name = "URL", conflicts_with_all = ["name", "version"])]
     id: Option<Url>,
 
     /// The key name.

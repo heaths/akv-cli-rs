@@ -49,6 +49,25 @@ Describe 'Encrypt' -Tag 'Keys', 'Certificates' {
         $script:AZURE_KEYVAULT_URL = $script:AZURE_KEYVAULT_URL.TrimEnd('/')
     }
 
+    Context 'Args' -Tag 'Args' {
+        It 'rejects URL with --name' {
+            $keyUrl = "${script:AZURE_KEYVAULT_URL}/keys/my-key/1"
+            & $script:akv encrypt $keyUrl --name my-key --value test 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+
+        It 'rejects URL with --version' {
+            $keyUrl = "${script:AZURE_KEYVAULT_URL}/keys/my-key/1"
+            & $script:akv encrypt $keyUrl --version 1 --value test 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+
+        It 'rejects --version without --name' {
+            & $script:akv encrypt --vault $script:AZURE_KEYVAULT_URL --version 1 --value test 2>$null
+            $LASTEXITCODE | Should -Be 2
+        }
+    }
+
     Context 'RSA key' -Tag 'Keys' {
         BeforeAll {
             # Create an RSA key and capture the versioned key URL.
