@@ -19,8 +19,47 @@ env:
   RUSTFLAGS: -Dwarnings
 
 jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Parse version
+      id: parse
+      run: |
+        tag='${{ github.ref_name }}'
+        if [[ $tag =~ ^v?([0-9]+(\.[0-9]+){0,2})$ ]]; then
+          version="${BASH_REMATCH[1]}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "::notice::Version: $version"
+        else
+          echo "::error::Invalid version tag: $tag"
+          exit 1
+        fi
+    - name: Checkout
+      uses: actions/checkout@v6
+    - name: Cache
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Set up toolchain
+      run: rustup install
+    - name: Verify version
+      run: |
+        expected='${{ steps.parse.outputs.version }}'
+        actual="$(cargo run -- --version)"
+        if [[ "$actual" != "akv $expected" ]]; then
+          echo "::error::\`akv --version\` '$actual' does not match '$expected'"
+          exit 1
+        fi
+
   test:
     uses: ./.github/workflows/ci.yml
+    needs: verify
     with:
       release: true
 
@@ -89,20 +128,19 @@ jobs:
         subject-path: ${{ steps.build.outputs.target }}
     - name: Package
       id: package
-      shell: pwsh
       run: |
-        $name = 'akv-${{ runner.os }}-${{ runner.arch }}'.ToLowerInvariant() -replace 'x64', 'amd64'
-        if ('${{ runner.os }}' -eq 'Windows') {
-          $name = "$name.zip"
-          $target = "target/release/$name"
-          Compress-Archive -Path ${{ steps.build.outputs.target }} -DestinationPath $target
-        } else {
-          $name = "$name.tar.gz"
-          $target = "target/release/$name"
-          tar czf "$target" -C ${{ steps.build.outputs.dir }} ${{ steps.build.outputs.name }}
-        }
-        "name=$name" >> $env:GITHUB_OUTPUT
-        "target=$target" >> $env:GITHUB_OUTPUT
+        name=$(echo 'akv-${{ runner.os }}-${{ runner.arch }}' | tr '[:upper:]' '[:lower:]' | sed 's/x64/amd64/')
+        if [[ '${{ runner.os }}' == 'Windows' ]]; then
+          name="$name.zip"
+          target="target/release/$name"
+          zip -j "$target" "${{ steps.build.outputs.target }}"
+        else
+          name="$name.tar.gz"
+          target="target/release/$name"
+          tar czf "$target" -C "${{ steps.build.outputs.dir }}" "${{ steps.build.outputs.name }}"
+        fi
+        echo "name=$name" >> "$GITHUB_OUTPUT"
+        echo "target=$target" >> "$GITHUB_OUTPUT"
     - name: Upload
       uses: actions/upload-artifact@v7
       with:
