@@ -1,0 +1,50 @@
+name: winget
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: The tag to release e.g., v0.1.0
+        required: true
+        type: string
+    secrets:
+      WINGET_CREATE_GITHUB_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag to release e.g., v0.1.0
+        required: true
+        type: string
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  update:
+    runs-on: windows-latest
+    environment:
+      name: winget
+      url: https://github.com/microsoft/winget-pkgs/pulls/heaths
+    steps:
+    - name: Install wingetcreate
+      run: |
+        winget install -e Microsoft.WingetCreate --accept-source-agreements --accept-package-agreements
+        wingetcreate --version
+    - name: Update WinGet package
+      run: |
+        tag='${{ inputs.tag || github.ref_name }}'
+        version="${tag#v}"
+        url_base="${{ github.server_url }}/${{ github.repository }}/releases/download/${tag}"
+        release_url="${{ github.server_url }}/${{ github.repository }}/releases/tag/${tag}"
+        date="$(date +%Y-%m-%d)"
+        wingetcreate update \
+          --urls "${url_base}/akv-windows-amd64.zip|x64" "${url_base}/akv-windows-arm64.zip|arm64" \
+          --version "$version" \
+          --release-notes-url "$release_url" \
+          --release-date "$date" \
+          --submit \
+          heaths.akv
+      env:
+        WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}

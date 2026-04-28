@@ -62,6 +62,12 @@
       "dictionaries": [
         "crates"
       ]
+    },
+    {
+      "filename": "build/",
+      "words": [
+        "wingetcreate"
+      ]
     }
   ]
 }
