@@ -1,9 +1,6 @@
 name: brew
 
 on:
-  release:
-    types:
-    - published
   workflow_call:
     inputs:
       tag:

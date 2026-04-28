@@ -1,9 +1,6 @@
 name: winget
 
 on:
-  release:
-    types:
-    - published
   workflow_call:
     inputs:
       tag:
@@ -50,4 +47,4 @@ jobs:
           --submit \
           heaths.akv
       env:
-        WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+        WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
