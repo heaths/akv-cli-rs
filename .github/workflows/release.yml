@@ -25,15 +25,9 @@ jobs:
     - name: Parse version
       id: parse
       run: |
-        tag='${{ github.ref_name }}'
-        if [[ $tag =~ ^v?([0-9]+(\.[0-9]+){0,2})$ ]]; then
-          version="${BASH_REMATCH[1]}"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "::notice::Version: $version"
-        else
-          echo "::error::Invalid version tag: $tag"
-          exit 1
-        fi
+        version="${GITHUB_REF_NAME#v}"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "::notice::Version: $version"
     - name: Checkout
       uses: actions/checkout@v6
     - name: Cache
@@ -198,3 +192,11 @@ jobs:
       tag: ${{ github.ref_name }}
     secrets:
       HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+
+  winget:
+    needs: release
+    uses: ./.github/workflows/winget.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets:
+      WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
