@@ -30,7 +30,7 @@ var tags = {
 }
 
 resource rg 'Microsoft.Resources/resourceGroups@2024-11-01' = {
-  name: 'rg-${environmentName}'
+  name: 'rg-akv-cli-${environmentName}'
   location: location
   tags: tags
 }
