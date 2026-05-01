@@ -27,6 +27,7 @@
     "rustup",
     "symm",
     "versionless",
+    "winget",
     "worktree"
   ],
   "dictionaryDefinitions": [

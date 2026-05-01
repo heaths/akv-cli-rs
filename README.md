@@ -7,24 +7,37 @@ The Azure Key Vault CLI can be used to read and decrypt secrets, pass them secur
 
 ## Installation
 
-Use [Homebrew] to install binaries for most macOS and Linux platforms, or build source when necessary.
+You can install prebuilt binaries or build from source.
 
+### Linux and macOS
+
+Use [Homebrew] to install binaries for most macOS and Linux platforms.
 You first need to install the tap, but only the first time:
 
 ```bash
 brew tap heaths/tap
 ```
 
-Once the tap is installed, you can install or update the `akv-cli` formulae:
+Once the tap is installed, you can install or update the `akv` formula:
 
 ```bash
-brew install akv-cli
+brew install akv
 ```
 
-If you have [Rust](https://www.rust-lang.org/tools/install) installed, you can also build the CLI on nearly any platform:
+### Windows
+
+Use [Winget] to install binaries for Windows:
+
+```pwsh
+winget install heaths.akv
+```
+
+### Build from source
+
+If you have [Rust] installed, you can also build the CLI on nearly any platform:
 
 ```bash
-cargo install akv-cli
+cargo install --locked akv-cli
 ```
 
 ## Using
@@ -203,3 +216,5 @@ Licensed under the [MIT](LICENSE.txt) license.
 [Azure Developer CLI]: https://aka.ms/azure-dev
 [Azure Key Vault]: https://azure.microsoft.com/products/key-vault/
 [Homebrew]: https://brew.sh
+[Rust]: https://www.rust-lang.org/tools/install
+[Winget]: https://github.com/microsoft/winget-cli
