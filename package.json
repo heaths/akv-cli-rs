@@ -1,5 +1,5 @@
 {
-  "name": "akv-cli-rs",
+  "name": "akv-cli",
   "version": "0.7.2",
   "description": "Development tooling for Azure Key Vault CLI",
   "scripts": {

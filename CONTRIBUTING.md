@@ -51,6 +51,7 @@ cargo test
 Integration and manual tests require a Key Vault. To provision a vault with the [Azure Developer CLI], run:
 
 ```bash
+# Environment name 'dev' recommended.
 azd up
 ```
 
@@ -61,8 +62,8 @@ cargo run -- secret list
 cargo run -- read --name secret-1
 ```
 
-If you provision a vault using `azd`, a `.env` file is created under `.azure/dev/.env`, which
-this project will read automatically.
+If you provision a vault using `azd`, a `.env` file is created under `.azure/dev/.env` by default,
+which this project will read automatically.
 
 To provision secret variables for demonstration, source an appropriate setup script under the `examples/` directory:
 

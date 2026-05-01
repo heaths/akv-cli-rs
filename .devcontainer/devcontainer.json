@@ -8,7 +8,10 @@
       "installBicep": true
     },
     "ghcr.io/azure/azure-dev/azd:0": {},
-    "ghcr.io/devcontainers/features/github-cli:1": {}
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/powershell": {
+      "modules": "Pester"
+    }
   },
   "customizations": {
     "vscode": {

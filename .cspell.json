@@ -5,7 +5,7 @@
   "ignorePaths": [
     ".cspell.json",
     ".devcontainer/",
-    ".github/",
+    ".github/workflows/",
     ".vscode/",
     "rust-toolchain.toml"
   ],
@@ -15,16 +15,19 @@
     "debuginfo",
     "deque",
     "dotenv",
+    "dwarnings",
     "encryptor",
     "libc",
     "lldb",
     "oaep",
     "repr",
     "rustdoc",
+    "rustflags",
     "rustlang",
     "rustup",
     "symm",
     "versionless",
+    "winget",
     "worktree"
   ],
   "dictionaryDefinitions": [
