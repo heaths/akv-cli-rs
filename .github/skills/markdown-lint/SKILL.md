@@ -1,29 +1,15 @@
 ---
 name: markdown-lint
-description: Guide for linting markdown files using markdownlint-cli2. Use this when asked to lint markdown, fix markdown formatting, or check markdown files.
+description: Run automatically whenever any markdown file is modified. Use when linting or fixing markdown formatting.
 ---
 
-# Markdown Linting with markdownlint-cli2
-
-## Commands
+# Markdown Lint
 
 ```bash
-# Lint markdown files
-npm run markdown-lint
-
-# Auto-fix markdown issues
-npm run markdown-lint:fix
+npm run markdown-lint        # check
+npm run markdown-lint:fix    # auto-fix
 ```
 
-## Configuration
-
-Configuration is in `.markdownlint-cli2.yaml`. See that file for enabled rules and ignored paths.
-
-[Rule reference](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md)
-
-## Workflow
-
-1. Run `npm run markdown-lint` to identify issues
-2. Run `npm run markdown-lint:fix` to auto-fix most issues
-3. Manually fix remaining issues if needed
-4. Verify with `npm run markdown-lint`
+- Config: `.markdownlint-cli2.yaml` (enabled rules, ignored paths)
+- [Rule reference](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md)
+- Auto-fix handles most issues; fix remaining ones manually and verify
