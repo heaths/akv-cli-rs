@@ -7,9 +7,6 @@ NestedInstallerType: portable
 NestedInstallerFiles:
 - RelativeFilePath: akv.exe
   PortableCommandAlias: akv
-Dependencies:
-  PackageDependencies:
-    - PackageIdentifier: ShiningLight.OpenSSL.LTS.Light
 Installers:
 - Architecture: x64
   InstallerUrl: https://github.com/heaths/akv-cli-rs/releases/download/v0.10.0/akv-windows-amd64.zip
