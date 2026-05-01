@@ -7,12 +7,9 @@ use crate::{
     jose::{Algorithm, Encode, EncryptionAlgorithm, Header, Set, Type, Unset},
     Error, ErrorKind, Result, ResultExt as _,
 };
+use aws_lc_rs::{aead, rand};
 use azure_core::{base64, Bytes};
 use azure_security_keyvault_keys::models::KeyOperationResult;
-use openssl::{
-    rand,
-    symm::{self, Cipher},
-};
 use std::{marker::PhantomData, str::FromStr};
 
 /// A JSON Web Encryption (JWE) structure.
@@ -55,18 +52,26 @@ impl Jwe {
             .enc
             .as_ref()
             .ok_or_else(|| Error::with_message(ErrorKind::InvalidData, "expected enc"))?;
-        let cipher: Cipher = enc.try_into()?;
+        let alg: &'static aead::Algorithm = enc.try_into()?;
         let aad = self.header.encode()?;
 
-        let plaintext: Bytes = symm::decrypt_aead(
-            cipher,
-            &result.cek,
-            Some(&self.iv),
-            aad.as_bytes(),
-            &self.ciphertext,
-            &self.tag,
-        )?
-        .into();
+        // `LessSafeKey` is used instead of `OpeningKey` + `NonceSequence` because decryption
+        // must supply an arbitrary nonce stored in the JWE compact form. The nonce-sequence
+        // APIs expect to own nonce tracking and cannot accept an externally supplied nonce
+        // without extra scaffolding.
+        let key = aead::LessSafeKey::new(
+            aead::UnboundKey::new(alg, &result.cek)
+                .map_err(|_| Error::with_message(ErrorKind::InvalidData, "invalid CEK"))?,
+        );
+        let nonce = aead::Nonce::try_assume_unique_for_key(&self.iv)
+            .map_err(|_| Error::with_message(ErrorKind::InvalidData, "invalid IV"))?;
+        // aws-lc-rs expects ciphertext || tag concatenated in a single buffer.
+        let mut buf = self.ciphertext.to_vec();
+        buf.extend_from_slice(&self.tag);
+        let plaintext = key
+            .open_in_place(nonce, aead::Aad::from(aad.as_bytes()), &mut buf)
+            .map_err(|_| Error::with_message(ErrorKind::Other, "decryption failed"))?;
+        let plaintext = Bytes::copy_from_slice(plaintext);
 
         Ok(plaintext)
     }
@@ -251,7 +256,7 @@ impl JweEncryptor<Set, Set> {
     {
         // Determine how big the CEK should be.
         let enc = &self.enc.unwrap_or(EncryptionAlgorithm::A128GCM);
-        let cipher: Cipher = enc.try_into()?;
+        let cipher: &'static aead::Algorithm = enc.try_into()?;
 
         // Validate or generate the CEK.
         let cek = match self.cek {
@@ -268,7 +273,7 @@ impl JweEncryptor<Set, Set> {
             None => {
                 // Allocate enough space for largest supported cipher.
                 let mut buf = [0; 32];
-                rand::rand_bytes(&mut buf)?;
+                rand::fill(&mut buf)?;
                 Bytes::copy_from_slice(&buf[0..cipher.key_len()])
             }
         };
@@ -290,46 +295,50 @@ impl JweEncryptor<Set, Set> {
         };
         let aad = header.encode()?;
 
-        // Generate the IV.
-        let iv_len = cipher.iv_len().ok_or_else(|| {
-            Error::with_message(
-                ErrorKind::InvalidData,
-                format!("expected iv length for cipher {}", &enc),
-            )
-        })?;
+        // All AES-GCM modes in aws-lc-rs use a fixed 96-bit (12-byte) nonce (aead::NONCE_LEN).
         let iv = match self.iv {
-            Some(v) if v.len() == iv_len => v,
+            Some(v) if v.len() == aead::NONCE_LEN => v,
             Some(v) => {
                 return Err(Error::with_message_fn(ErrorKind::InvalidData, || {
-                    format!("require iv size of {} bytes, got {}", iv_len, v.len())
+                    format!(
+                        "require iv size of {} bytes, got {}",
+                        aead::NONCE_LEN,
+                        v.len()
+                    )
                 }));
             }
             None => {
-                // Allocate enough space for largest supported cipher.
-                let mut buf = [0; 12];
-                rand::rand_bytes(&mut buf)?;
-                Bytes::copy_from_slice(&buf[0..iv_len])
+                let mut buf = [0u8; aead::NONCE_LEN];
+                rand::fill(&mut buf)?;
+                Bytes::copy_from_slice(&buf)
             }
         };
 
+        // `LessSafeKey` is used instead of `SealingKey` + `NonceSequence` because the IV is
+        // stored in the JWE compact form and must be reproduced verbatim for decryption. The
+        // nonce-sequence APIs own nonce generation and do not expose a way to supply an
+        // arbitrary nonce without extra scaffolding.
+        let key = aead::LessSafeKey::new(
+            aead::UnboundKey::new(cipher, &cek)
+                .map_err(|_| Error::with_message(ErrorKind::InvalidData, "invalid CEK"))?,
+        );
+        let nonce = aead::Nonce::try_assume_unique_for_key(&iv)
+            .map_err(|_| Error::with_message(ErrorKind::InvalidData, "invalid IV"))?;
         let plaintext = self.plaintext.expect("expected plaintext");
-        let mut tag = [0; 16];
-        let ciphertext: Bytes = symm::encrypt_aead(
-            cipher,
-            &cek,
-            Some(&iv),
-            aad.as_bytes(),
-            &plaintext,
-            &mut tag,
-        )?
-        .into();
+        // aws-lc-rs appends the authentication tag to the ciphertext buffer in-place.
+        let mut buf = plaintext.to_vec();
+        key.seal_in_place_append_tag(nonce, aead::Aad::from(aad.as_bytes()), &mut buf)
+            .map_err(|_| Error::with_message(ErrorKind::Other, "encryption failed"))?;
+        // Split the appended tag (last tag_len bytes) from the ciphertext.
+        let tag = buf.split_off(buf.len() - cipher.tag_len());
+        let ciphertext: Bytes = buf.into();
 
         Ok(Jwe {
             header,
             cek: result.cek,
             iv,
             ciphertext,
-            tag: Bytes::copy_from_slice(&tag),
+            tag: tag.into(),
         })
     }
 }
@@ -348,20 +357,20 @@ impl<C, K> Default for JweEncryptor<C, K> {
     }
 }
 
-impl TryFrom<EncryptionAlgorithm> for Cipher {
+impl TryFrom<EncryptionAlgorithm> for &'static aead::Algorithm {
     type Error = Error;
     fn try_from(value: EncryptionAlgorithm) -> Result<Self> {
         (&value).try_into()
     }
 }
 
-impl TryFrom<&EncryptionAlgorithm> for Cipher {
+impl TryFrom<&EncryptionAlgorithm> for &'static aead::Algorithm {
     type Error = Error;
-    fn try_from(value: &EncryptionAlgorithm) -> Result<Cipher> {
+    fn try_from(value: &EncryptionAlgorithm) -> Result<&'static aead::Algorithm> {
         match value {
-            EncryptionAlgorithm::A128GCM => Ok(Cipher::aes_128_gcm()),
-            EncryptionAlgorithm::A192GCM => Ok(Cipher::aes_192_gcm()),
-            EncryptionAlgorithm::A256GCM => Ok(Cipher::aes_256_gcm()),
+            EncryptionAlgorithm::A128GCM => Ok(&aead::AES_128_GCM),
+            EncryptionAlgorithm::A192GCM => Ok(&aead::AES_192_GCM),
+            EncryptionAlgorithm::A256GCM => Ok(&aead::AES_256_GCM),
             EncryptionAlgorithm::Other(value) => {
                 Err(Error::with_message_fn(ErrorKind::InvalidData, || {
                     format!("unsupported encryption algorithm {value}")
@@ -523,22 +532,22 @@ mod tests {
 
     #[test]
     fn encryption_algorithm_cipher() {
-        let cipher: Cipher = EncryptionAlgorithm::A128GCM
+        let cipher: &'static aead::Algorithm = EncryptionAlgorithm::A128GCM
             .try_into()
             .expect("try_into should succeed");
-        assert_eq!(cipher.iv_len(), Some(12));
+        assert_eq!(cipher.nonce_len(), 12);
         assert_eq!(cipher.key_len(), 16);
 
-        let cipher: Cipher = EncryptionAlgorithm::A192GCM
+        let cipher: &'static aead::Algorithm = EncryptionAlgorithm::A192GCM
             .try_into()
             .expect("try_into should succeed");
-        assert_eq!(cipher.iv_len(), Some(12));
+        assert_eq!(cipher.nonce_len(), 12);
         assert_eq!(cipher.key_len(), 24);
 
-        let cipher: Cipher = EncryptionAlgorithm::A256GCM
+        let cipher: &'static aead::Algorithm = EncryptionAlgorithm::A256GCM
             .try_into()
             .expect("try_into should succeed");
-        assert_eq!(cipher.iv_len(), Some(12));
+        assert_eq!(cipher.nonce_len(), 12);
         assert_eq!(cipher.key_len(), 32);
     }
 

@@ -200,8 +200,8 @@ impl From<dotenvy::Error> for Error {
     }
 }
 
-impl From<openssl::error::ErrorStack> for Error {
-    fn from(error: openssl::error::ErrorStack) -> Self {
+impl From<aws_lc_rs::error::Unspecified> for Error {
+    fn from(error: aws_lc_rs::error::Unspecified) -> Self {
         Self::new(ErrorKind::Other, error)
     }
 }
