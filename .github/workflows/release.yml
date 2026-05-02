@@ -186,10 +186,10 @@ jobs:
     secrets:
       HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
 
-  winget:
-    needs: release
-    uses: ./.github/workflows/winget.yml
-    with:
-      tag: ${{ github.ref_name }}
-    secrets:
-      WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+  # winget:
+  #   needs: release
+  #   uses: ./.github/workflows/winget.yml
+  #   with:
+  #     tag: ${{ github.ref_name }}
+  #   secrets:
+  #     WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
