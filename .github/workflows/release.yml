@@ -122,7 +122,7 @@ jobs:
         if [[ '${{ runner.os }}' == 'Windows' ]]; then
           name="$name.zip"
           target="target/release/$name"
-          zip -j "$target" "${{ steps.build.outputs.target }}"
+          7z a "$target" "${{ steps.build.outputs.target }}" -mx=9
         else
           name="$name.tar.gz"
           target="target/release/$name"
