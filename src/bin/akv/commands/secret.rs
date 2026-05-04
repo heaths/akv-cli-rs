@@ -489,8 +489,8 @@ fn show(secret: &Secret) -> Result<()> {
     let now = OffsetDateTime::now_utc();
     let formatter = Formatter::new();
 
-    println!("ID: {}", &resource.source_id);
-    println!("Name: {}", &resource.name);
+    println!("ID: {}", resource.source_id);
+    println!("Name: {}", resource.name);
     println!("Version: {}", resource.version.unwrap_or_default());
     println!(
         "Type: {}",
