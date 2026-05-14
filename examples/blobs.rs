@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE.txt in the project root for license information.
 
 use akv_cli::{ErrorKind, ResultExt};
+use azure_core::http::Url;
 use azure_identity::DeveloperToolsCredential;
 use azure_storage_blob::BlobServiceClient;
 use clap::{Parser, Subcommand};
@@ -17,13 +18,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotazure::load()?;
     let args = Args::parse();
 
-    let endpoint = env::var("AZURE_STORAGE_SERVICE_ENDPOINT")
-        .with_context(ErrorKind::Other, "$AZURE_STORAGE_SERVICE_ENDPOINT required")?;
+    let endpoint: Url = env::var("AZURE_STORAGE_SERVICE_ENDPOINT")
+        .with_context(ErrorKind::Other, "$AZURE_STORAGE_SERVICE_ENDPOINT required")?
+        .parse()
+        .with_context(
+            ErrorKind::InvalidData,
+            "$AZURE_STORAGE_SERVICE_ENDPOINT must be URL",
+        )?;
 
     // Get a container client.
     let credential = DeveloperToolsCredential::new(None)?;
-    let client = BlobServiceClient::new(&endpoint, Some(credential), None)?
-        .blob_container_client("examples");
+    let client =
+        BlobServiceClient::new(endpoint, Some(credential), None)?.blob_container_client("examples");
 
     if args.list_args().is_some() {
         // List blobs within the "examples" container.
