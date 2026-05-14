@@ -346,7 +346,7 @@ impl Commands {
         let spinner = ProgressBar::new_spinner().with_message("Creating certificate...");
         spinner.enable_steady_tick(Duration::from_millis(100));
         let certificate = client
-            .create_certificate(name, params.try_into()?, None)?
+            .begin_create_certificate(name, params.try_into()?, None)?
             .await?
             .into_model()?;
         spinner.finish_and_clear();
