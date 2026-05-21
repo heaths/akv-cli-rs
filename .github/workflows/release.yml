@@ -29,9 +29,9 @@ jobs:
         echo "version=$version" >> "$GITHUB_OUTPUT"
         echo "::notice::Version: $version"
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Cache
-      uses: actions/cache@v5
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: |
           ~/.cargo/bin/
@@ -63,7 +63,7 @@ jobs:
     steps:
     # Check out with full history to generate release notes.
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         fetch-depth: 0
     - name: Set up toolchain
@@ -91,9 +91,9 @@ jobs:
     needs: draft
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Cache
-      uses: actions/cache@v5
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: |
           ~/.cargo/bin/
@@ -112,7 +112,7 @@ jobs:
         echo "name=akv${{ matrix.extension }}" | tee -a "$GITHUB_OUTPUT"
         echo "target=target/release/akv${{ matrix.extension }}" | tee -a "$GITHUB_OUTPUT"
     - name: Attest executable
-      uses: actions/attest-build-provenance@v4
+      uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
       with:
         subject-path: ${{ steps.build.outputs.target }}
     - name: Package
@@ -132,7 +132,7 @@ jobs:
         echo "name=$name" >> "$GITHUB_OUTPUT"
         echo "target=$target" >> "$GITHUB_OUTPUT"
     - name: Upload
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.package.outputs.name }}
         path: ${{ steps.package.outputs.target }}
@@ -146,9 +146,9 @@ jobs:
     needs: package
     steps:
     - name: Download
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
     - name: Attest
-      uses: actions/attest-build-provenance@v4
+      uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
       with:
         subject-path: ${{ github.workspace }}/*
 
@@ -159,12 +159,12 @@ jobs:
     environment: crates-io
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Set up toolchain
       run: rustup install
     - name: Authenticate with crates.io
       id: auth
-      uses: rust-lang/crates-io-auth-action@v1.0.4
+      uses: rust-lang/crates-io-auth-action@bbd81622f20ce9e2dd9622e3218b975523e45bbe # v1.0.4
     - name: Publish
       run: cargo publish
       env:
@@ -175,7 +175,7 @@ jobs:
     needs: attest
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Release
       run: gh release edit '${{ github.ref_name }}' --draft=false
       env:

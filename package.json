@@ -2,12 +2,6 @@
   "name": "akv-cli",
   "version": "0.7.2",
   "description": "Development tooling for Azure Key Vault CLI",
-  "scripts": {
-    "spell-check": "cspell lint --config .cspell.json .",
-    "spell-check:fix": "cspell lint --config .cspell.json . --fix",
-    "markdown-lint": "markdownlint-cli2",
-    "markdown-lint:fix": "markdownlint-cli2 --fix"
-  },
   "engines": {
     "node": ">=22.0.0"
   },

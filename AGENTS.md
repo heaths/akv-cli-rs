@@ -21,18 +21,19 @@ cargo doc --all-features --no-deps --workspace   # docs
 
 Use these skills when applicable. Read the skill file for full instructions.
 
-| Skill         | File                                      | When to use                           |
-|---------------|-------------------------------------------|---------------------------------------|
-| spell-check   | `.github/skills/spell-check/SKILL.md`     | Checking or fixing spelling errors    |
-| markdown-lint | `.github/skills/markdown-lint/SKILL.md`   | Linting or fixing markdown formatting |
+| Skill              | File                                           | When to use                           |
+|--------------------|------------------------------------------------|---------------------------------------|
+| check-spelling     | `.github/skills/check-spelling/SKILL.md`       | Checking or fixing spelling errors    |
+| lint-markdown      | `.github/skills/lint-markdown/SKILL.md`        | Linting or fixing markdown formatting |
+| pin-github-actions | `.github/skills/pin-github-actions/SKILL.md`   | Pin GitHub Actions to a commit SHA    |
 
 ## Workflow
 
 Before marking any request complete:
 
 - Run `cargo test --all-features --workspace` if Rust code changed
-- Run the spell-check skill if any text content changed
-- Run the markdown-lint skill whenever any markdown file is modified
+- Run the check-spelling skill if any text content changed
+- Run the lint-markdown skill whenever any markdown file is modified
 
 Commits and PRs:
 

@@ -99,35 +99,29 @@ Invoke-Pester tests/test.ps1
 
 ### Spell Checking
 
-To check spelling:
+Check spelling (changed files only):
 
 ```bash
-npm run spell-check
+git diff --name-only --diff-filter=d HEAD | npx cspell lint --config .cspell.json --file-list stdin
 ```
 
-To automatically fix spelling issues where possible:
+Auto-fix obvious misspellings:
 
 ```bash
-npm run spell-check:fix
+git diff --name-only --diff-filter=d HEAD | npx cspell lint --config .cspell.json --fix --file-list stdin
 ```
 
-The spell checker uses cspell with configuration in `.cspell.json`. Add custom words to the `words` array in that file.
+Add custom words to the `words` array in `.cspell.json`.
 
 ### Markdown Linting
 
-To lint markdown files:
+Fix changed markdown files:
 
 ```bash
-npm run markdown-lint
+npx markdownlint-cli2 --no-globs --fix $(git diff --name-only --diff-filter=d HEAD -- '*.md' '*.markdown')
 ```
 
-To automatically fix markdown issues where possible:
-
-```bash
-npm run markdown-lint:fix
-```
-
-The markdown linter uses markdownlint-cli2 with configuration in `.markdownlint-cli2.yaml`.
+Configuration is in `.markdownlint-cli2.yaml`.
 
 ## Examples
 
