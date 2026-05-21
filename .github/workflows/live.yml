@@ -31,16 +31,16 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Install azd
-      uses: Azure/setup-azd@v2
+      uses: Azure/setup-azd@634ad924cf8baef2257898ba5663be8d19f15aca # v2.3.0
     - name: Install Pester
       run: |
         Install-Module Pester -RequiredVersion 5.6.1 -Force -Scope CurrentUser
         Import-Module Pester -RequiredVersion 5.6.1
       shell: pwsh
     - name: Cache
-      uses: actions/cache@v5
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         path: |
           ~/.cargo/bin/
@@ -52,7 +52,7 @@ jobs:
     - name: Set up toolchain
       run: rustup install
     - name: Authenticate az (OIDC)
-      uses: azure/login@v3
+      uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
       with:
         client-id: ${{ vars.AZURE_CLIENT_ID }}
         tenant-id: ${{ vars.AZURE_TENANT_ID }}
@@ -84,7 +84,7 @@ jobs:
       continue-on-error: true
       run: azd down --force --purge --no-prompt
     - name: Summarize tests
-      uses: test-summary/action@v2
+      uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
       if: always()
       with:
         paths: |
