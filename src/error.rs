@@ -133,10 +133,32 @@ impl fmt::Display for Error {
         match &self.repr {
             Repr::Simple(kind) => write!(f, "{kind}"),
             Repr::SimpleMessage(_, message) => write!(f, "{message}"),
-            Repr::Custom(Custom { error, .. }) => write!(f, "{error}"),
-            Repr::CustomMessage(_, message) => write!(f, "{message}"),
+            Repr::Custom(Custom { error, .. }) => {
+                if f.alternate() {
+                    return display(f, &**error);
+                }
+                write!(f, "{error}")
+            }
+            Repr::CustomMessage(Custom { error, .. }, message) => {
+                if f.alternate() {
+                    write!(f, "{message}: ")?;
+                    return display(f, &**error);
+                }
+                write!(f, "{message}")
+            }
         }
     }
+}
+
+fn display(f: &mut fmt::Formatter<'_>, error: &(dyn std::error::Error + 'static)) -> fmt::Result {
+    write!(f, "{error}")?;
+
+    if let Some(source) = error.source() {
+        write!(f, ": ")?;
+        display(f, source)?;
+    }
+
+    Ok(())
 }
 
 impl std::error::Error for Error {
@@ -281,4 +303,62 @@ mod private {
     pub trait Sealed {}
 
     impl<T, E> Sealed for std::result::Result<T, E> where E: std::error::Error + Send + Sync + 'static {}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Error, ErrorKind};
+    use std::fmt;
+
+    #[derive(Debug)]
+    struct ChildError;
+
+    impl fmt::Display for ChildError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("child")
+        }
+    }
+
+    impl std::error::Error for ChildError {}
+
+    #[derive(Debug)]
+    struct ParentError {
+        source: ChildError,
+    }
+
+    impl fmt::Display for ParentError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("parent")
+        }
+    }
+
+    impl std::error::Error for ParentError {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            Some(&self.source)
+        }
+    }
+
+    #[test]
+    fn alternate_format_includes_third_party_sources() {
+        let err = Error::with_error(
+            ErrorKind::Other,
+            ParentError { source: ChildError },
+            "outer",
+        );
+
+        assert_eq!(format!("{err}"), "outer");
+        assert_eq!(format!("{err:#}"), "outer: parent: child");
+    }
+
+    #[test]
+    fn alternate_format_includes_nested_error_sources() {
+        let inner = Error::with_error(
+            ErrorKind::Other,
+            ParentError { source: ChildError },
+            "inner",
+        );
+        let err = Error::with_error(ErrorKind::Other, inner, "outer");
+
+        assert_eq!(format!("{err:#}"), "outer: inner: parent: child");
+    }
 }

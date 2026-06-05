@@ -234,7 +234,7 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(&models::Key::from(key), global_args.color()),
+            OutputFormat::Json => json::print(&models::Key::from(key), global_args.color_mode()),
             OutputFormat::Default => show(&key),
         }
     }
@@ -295,7 +295,7 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(&models::Key::from(key), global_args.color()),
+            OutputFormat::Json => json::print(&models::Key::from(key), global_args.color_mode()),
             OutputFormat::Default => show(&key),
         }
     }
@@ -333,7 +333,7 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(&models::Key::from(key), global_args.color()),
+            OutputFormat::Json => json::print(&models::Key::from(key), global_args.color_mode()),
             OutputFormat::Default => show(&key),
         }
     }
@@ -361,7 +361,7 @@ impl Commands {
         keys.sort_by(|a, b| a.kid.cmp(&b.kid));
 
         if matches!(output, OutputFormat::Json) {
-            return json::print(&keys, global_args.color());
+            return json::print(&keys, global_args.color_mode());
         }
 
         let mut table = Table::new();
@@ -408,7 +408,7 @@ impl Commands {
         }
 
         // cspell:ignore printstd
-        table.print_color_conditionally(global_args.color())?;
+        table.print_color_conditionally(global_args.color_mode())?;
 
         Ok(())
     }
@@ -445,7 +445,7 @@ impl Commands {
         });
 
         if matches!(output, OutputFormat::Json) {
-            return json::print(&keys, global_args.color());
+            return json::print(&keys, global_args.color_mode());
         }
 
         let mut table = Table::new();
@@ -486,7 +486,7 @@ impl Commands {
         }
 
         // cspell:ignore printstd
-        table.print_color_conditionally(global_args.color())?;
+        table.print_color_conditionally(global_args.color_mode())?;
 
         Ok(())
     }

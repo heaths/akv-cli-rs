@@ -16,6 +16,7 @@ use clap::Parser;
 use commands::Commands;
 use std::{
     path::PathBuf,
+    process,
     sync::{Arc, OnceLock},
 };
 use time::macros::format_description;
@@ -26,10 +27,25 @@ use tracing_subscriber::{
 };
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    let loaded_dotenv = dotenv()?;
+async fn main() {
+    let mut style = ColorMode::Auto.style();
+    let loaded_dotenv = match dotenv() {
+        Ok(b) => b,
+        Err(err) => {
+            eprintln!("{}: {err}", style.error("Error"),);
+            process::exit(1);
+        }
+    };
 
     let args = Args::parse();
+    style = args.color_mode().style();
+    if let Err(err) = run(loaded_dotenv, args).await {
+        eprintln!("{}: {err:#}", style.error("Error"));
+        process::exit(1);
+    }
+}
+
+async fn run(loaded_dotenv: Dotenv, args: Args) -> Result<()> {
     let verbosity = match args.verbose {
         0 => LevelFilter::OFF,
         1 => LevelFilter::INFO,
@@ -45,6 +61,7 @@ async fn main() -> Result<()> {
         .with_env_filter(filter)
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .with_writer(std::io::stderr)
+        .with_ansi(args.color_enabled())
         .with_timer(LocalTime::new(format_description!(
             // cspell:disable-next-line
             "[hour]:[minute]:[second].[subsecond digits:6]"
@@ -84,7 +101,11 @@ struct Args {
 }
 
 impl Args {
-    fn color(&self) -> ColorMode {
+    fn color_enabled(&self) -> bool {
+        self.color_mode().enabled()
+    }
+
+    fn color_mode(&self) -> ColorMode {
         #[cfg(feature = "color")]
         match self.color {
             ColorChoice::Always => ColorMode::Always,
@@ -131,29 +152,13 @@ fn credential() -> Result<Arc<dyn TokenCredential>> {
         .to_owned())
 }
 
-fn color(#[allow(unused_variables)] mode: ColorMode) -> bool {
-    #[cfg(feature = "color")]
-    {
-        use yansi::Condition;
-
-        match mode {
-            ColorMode::Always => true,
-            ColorMode::Auto => Condition::tty_and_color(),
-            ColorMode::Never => false,
-        }
-    }
-
-    #[cfg(not(feature = "color"))]
-    false
-}
-
 trait TableExt {
     fn print_color_conditionally(&self, mode: ColorMode) -> crate::Result<usize>;
 }
 
 impl TableExt for prettytable::Table {
     fn print_color_conditionally(&self, mode: ColorMode) -> crate::Result<usize> {
-        if color(mode) {
+        if mode.enabled() {
             self.print_tty(mode == ColorMode::Always)
                 .with_kind(ErrorKind::Io)
         } else {

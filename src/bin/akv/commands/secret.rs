@@ -216,7 +216,9 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(&models::Secret::from(secret), global_args.color()),
+            OutputFormat::Json => {
+                json::print(&models::Secret::from(secret), global_args.color_mode())
+            }
             OutputFormat::Default => show(&secret),
         }
     }
@@ -276,7 +278,9 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(&models::Secret::from(secret), global_args.color()),
+            OutputFormat::Json => {
+                json::print(&models::Secret::from(secret), global_args.color_mode())
+            }
             OutputFormat::Default => show(&secret),
         }
     }
@@ -314,7 +318,9 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => json::print(&models::Secret::from(secret), global_args.color()),
+            OutputFormat::Json => {
+                json::print(&models::Secret::from(secret), global_args.color_mode())
+            }
             OutputFormat::Default => show(&secret),
         }
     }
@@ -342,7 +348,7 @@ impl Commands {
         secrets.sort_by(|a, b| a.id.cmp(&b.id));
 
         if matches!(output, OutputFormat::Json) {
-            return json::print(&secrets, global_args.color());
+            return json::print(&secrets, global_args.color_mode());
         }
 
         let mut table = Table::new();
@@ -392,7 +398,7 @@ impl Commands {
         }
 
         // cspell:ignore printstd
-        table.print_color_conditionally(global_args.color())?;
+        table.print_color_conditionally(global_args.color_mode())?;
 
         Ok(())
     }
@@ -429,7 +435,7 @@ impl Commands {
         });
 
         if matches!(output, OutputFormat::Json) {
-            return json::print(&secrets, global_args.color());
+            return json::print(&secrets, global_args.color_mode());
         }
 
         let mut table = Table::new();
@@ -477,7 +483,7 @@ impl Commands {
         }
 
         // cspell:ignore printstd
-        table.print_color_conditionally(global_args.color())?;
+        table.print_color_conditionally(global_args.color_mode())?;
 
         Ok(())
     }
