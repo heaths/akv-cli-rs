@@ -33,8 +33,7 @@ jobs:
         if winget source list | grep -qiE '^\s*msstore\s'; then
           winget source remove msstore || echo "Warning: failed to remove msstore source"
         fi
-        winget install -e Microsoft.WingetCreate --source winget --accept-source-agreements --accept-package-agreements
-        wingetcreate version
+        winget install -e Microsoft.WingetCreate --source winget --accept-source-agreements --accept-package-agreements --silent
     - name: Update WinGet package
       run: |
         tag='${{ inputs.tag || github.ref_name }}'
