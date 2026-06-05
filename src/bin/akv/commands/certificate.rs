@@ -364,9 +364,10 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => {
-                json::print(&models::Certificate::from(certificate), global_args.color())
-            }
+            OutputFormat::Json => json::print(
+                &models::Certificate::from(certificate),
+                global_args.color_mode(),
+            ),
             OutputFormat::Default => show(&certificate),
         }
     }
@@ -425,9 +426,10 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => {
-                json::print(&models::Certificate::from(certificate), global_args.color())
-            }
+            OutputFormat::Json => json::print(
+                &models::Certificate::from(certificate),
+                global_args.color_mode(),
+            ),
             OutputFormat::Default => show(&certificate),
         }
     }
@@ -506,7 +508,7 @@ impl Commands {
         if let Some(policy) = certificate.policy {
             json::print(
                 &models::CertificatePolicy::from(policy),
-                global_args.color(),
+                global_args.color_mode(),
             )?;
         }
 
@@ -546,9 +548,10 @@ impl Commands {
             .into_model()?;
 
         match output {
-            OutputFormat::Json => {
-                json::print(&models::Certificate::from(certificate), global_args.color())
-            }
+            OutputFormat::Json => json::print(
+                &models::Certificate::from(certificate),
+                global_args.color_mode(),
+            ),
             OutputFormat::Default => show(&certificate),
         }
     }
@@ -572,7 +575,7 @@ impl Commands {
 
         json::print(
             &models::CertificatePolicy::from(policy),
-            global_args.color(),
+            global_args.color_mode(),
         )
     }
 
@@ -597,7 +600,7 @@ impl Commands {
         certificates.sort_by(|a, b| a.id.cmp(&b.id));
 
         if matches!(output, OutputFormat::Json) {
-            return json::print(&certificates, global_args.color());
+            return json::print(&certificates, global_args.color_mode());
         }
 
         let mut table = Table::new();
@@ -650,7 +653,7 @@ impl Commands {
         }
 
         // cspell:ignore printstd
-        table.print_color_conditionally(global_args.color())?;
+        table.print_color_conditionally(global_args.color_mode())?;
 
         Ok(())
     }
@@ -687,7 +690,7 @@ impl Commands {
         });
 
         if matches!(output, OutputFormat::Json) {
-            return json::print(&certificates, global_args.color());
+            return json::print(&certificates, global_args.color_mode());
         }
 
         let mut table = Table::new();
@@ -734,7 +737,7 @@ impl Commands {
         }
 
         // cspell:ignore printstd
-        table.print_color_conditionally(global_args.color())?;
+        table.print_color_conditionally(global_args.color_mode())?;
 
         Ok(())
     }
