@@ -31,7 +31,7 @@ jobs:
     - name: Install wingetcreate
       run: |
         if winget source list | grep -qiE '^\s*msstore\s'; then
-          winget source remove msstore
+          winget source remove msstore || echo "Warning: failed to remove msstore source"
         fi
         winget install -e Microsoft.WingetCreate --source winget --accept-source-agreements --accept-package-agreements
         wingetcreate --version
