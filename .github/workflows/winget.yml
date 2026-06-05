@@ -30,7 +30,8 @@ jobs:
     steps:
     - name: Install wingetcreate
       run: |
-        winget install -e Microsoft.WingetCreate --accept-source-agreements --accept-package-agreements
+        winget source remove msstore || true
+        winget install -e Microsoft.WingetCreate --source winget --accept-source-agreements --accept-package-agreements
         wingetcreate --version
     - name: Update WinGet package
       run: |
