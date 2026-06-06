@@ -28,24 +28,50 @@ jobs:
       name: winget
       url: https://github.com/microsoft/winget-pkgs/pulls/heaths
     steps:
-    - name: Install wingetcreate
-      run: |
-        if winget source list | grep -qiE '^\s*msstore\s'; then
-          winget source remove msstore || echo "Warning: failed to remove msstore source"
-        fi
-        winget install -e Microsoft.WingetCreate --source winget --accept-source-agreements --accept-package-agreements --silent
-    - name: Update WinGet package
+    - name: Set WinGet Variables
       run: |
         tag='${{ inputs.tag || github.ref_name }}'
         version="${tag#v}"
         url_base="${{ github.server_url }}/${{ github.repository }}/releases/download/${tag}"
         release_url="${{ github.server_url }}/${{ github.repository }}/releases/tag/${tag}"
+        manifest_root="${RUNNER_TEMP}/winget"
+        manifest_path="${manifest_root}/manifests/h/heaths/akv/${version}"
         date="$(date +%Y-%m-%d)"
+        echo "WINGET_TAG=$tag" >> "$GITHUB_ENV"
+        echo "WINGET_VERSION=$version" >> "$GITHUB_ENV"
+        echo "WINGET_URL_BASE=$url_base" >> "$GITHUB_ENV"
+        echo "WINGET_RELEASE_URL=$release_url" >> "$GITHUB_ENV"
+        echo "WINGET_MANIFEST_ROOT=$manifest_root" >> "$GITHUB_ENV"
+        echo "WINGET_MANIFEST_PATH=$manifest_path" >> "$GITHUB_ENV"
+        echo "WINGET_RELEASE_DATE=$date" >> "$GITHUB_ENV"
+    - name: Install WinGetCreate
+      run: |
+        if winget source list | grep -qiE '^\s*msstore\s'; then
+          winget source remove msstore || echo "Warning: failed to remove msstore source"
+        fi
+        winget install -e Microsoft.WingetCreate --source winget --accept-source-agreements --accept-package-agreements --silent
+    - name: Generate WinGet package
+      run: |
         wingetcreate update \
-          --urls "${url_base}/akv-windows-amd64.zip|x64" "${url_base}/akv-windows-arm64.zip|arm64" \
-          --version "$version" \
-          --release-notes-url "$release_url" \
-          --release-date "$date" \
+          --urls "${WINGET_URL_BASE}/akv-windows-amd64.zip|x64" "${WINGET_URL_BASE}/akv-windows-arm64.zip|arm64" \
+          --version "$WINGET_VERSION" \
+          --release-notes-url "$WINGET_RELEASE_URL" \
+          --release-date "$WINGET_RELEASE_DATE" \
+          --out "$WINGET_MANIFEST_ROOT" \
+          heaths.akv
+    - name: Validate WinGet package
+      run: |
+        winget validate --manifest "$WINGET_MANIFEST_PATH"
+    - name: Install WinGet package
+      run: |
+        winget install --manifest "$WINGET_MANIFEST_PATH"
+    - name: Update WinGet package
+      run: |
+        wingetcreate update \
+          --urls "${WINGET_URL_BASE}/akv-windows-amd64.zip|x64" "${WINGET_URL_BASE}/akv-windows-arm64.zip|arm64" \
+          --version "$WINGET_VERSION" \
+          --release-notes-url "$WINGET_RELEASE_URL" \
+          --release-date "$WINGET_RELEASE_DATE" \
           --submit \
           heaths.akv
       env:
