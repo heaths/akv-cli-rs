@@ -87,9 +87,8 @@ jobs:
     - name: Validate WinGet package
       run: |
         winget validate --manifest "$WINGET_MANIFEST_PATH" --ignore-warnings
-    - name: Install WinGet package
-      run: |
-        winget install --manifest "$WINGET_MANIFEST_PATH"
+        # `winget install` requires enabling LocalManifestFiles,
+        # but we have no practical way to verify install because we'd have to restart the shell.
   update:
     needs: validate
     runs-on: windows-latest
