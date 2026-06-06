@@ -22,13 +22,19 @@ defaults:
     shell: bash
 
 jobs:
-  update:
+  validate:
     runs-on: windows-latest
-    environment:
-      name: winget
-      url: https://github.com/microsoft/winget-pkgs/pulls/heaths
+    outputs:
+      tag: ${{ steps.vars.outputs.tag }}
+      version: ${{ steps.vars.outputs.version }}
+      url_base: ${{ steps.vars.outputs.url_base }}
+      release_url: ${{ steps.vars.outputs.release_url }}
+      manifest_root: ${{ steps.vars.outputs.manifest_root }}
+      manifest_path: ${{ steps.vars.outputs.manifest_path }}
+      release_date: ${{ steps.vars.outputs.release_date }}
     steps:
     - name: Set WinGet Variables
+      id: vars
       run: |
         tag='${{ inputs.tag || github.ref_name }}'
         version="${tag#v}"
@@ -44,6 +50,13 @@ jobs:
         echo "WINGET_MANIFEST_ROOT=$manifest_root" >> "$GITHUB_ENV"
         echo "WINGET_MANIFEST_PATH=$manifest_path" >> "$GITHUB_ENV"
         echo "WINGET_RELEASE_DATE=$date" >> "$GITHUB_ENV"
+        echo "tag=$tag" >> "$GITHUB_OUTPUT"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "url_base=$url_base" >> "$GITHUB_OUTPUT"
+        echo "release_url=$release_url" >> "$GITHUB_OUTPUT"
+        echo "manifest_root=$manifest_root" >> "$GITHUB_OUTPUT"
+        echo "manifest_path=$manifest_path" >> "$GITHUB_OUTPUT"
+        echo "release_date=$date" >> "$GITHUB_OUTPUT"
     - name: Install WinGetCreate
       run: |
         if winget source list | grep -qiE '^\s*msstore\s'; then
@@ -65,8 +78,27 @@ jobs:
     - name: Install WinGet package
       run: |
         winget install --manifest "$WINGET_MANIFEST_PATH"
+  update:
+    needs: validate
+    runs-on: windows-latest
+    environment:
+      name: winget
+      url: https://github.com/microsoft/winget-pkgs/pulls/heaths
+    env:
+      WINGET_TAG: ${{ needs.validate.outputs.tag }}
+      WINGET_VERSION: ${{ needs.validate.outputs.version }}
+      WINGET_URL_BASE: ${{ needs.validate.outputs.url_base }}
+      WINGET_RELEASE_URL: ${{ needs.validate.outputs.release_url }}
+      WINGET_MANIFEST_ROOT: ${{ needs.validate.outputs.manifest_root }}
+      WINGET_MANIFEST_PATH: ${{ needs.validate.outputs.manifest_path }}
+      WINGET_RELEASE_DATE: ${{ needs.validate.outputs.release_date }}
+    steps:
     - name: Update WinGet package
       run: |
+        if winget source list | grep -qiE '^\s*msstore\s'; then
+          winget source remove msstore || echo "Warning: failed to remove msstore source"
+        fi
+        winget install -e Microsoft.WingetCreate --source winget --accept-source-agreements --accept-package-agreements --silent
         wingetcreate update \
           --urls "${WINGET_URL_BASE}/akv-windows-amd64.zip|x64" "${WINGET_URL_BASE}/akv-windows-arm64.zip|arm64" \
           --version "$WINGET_VERSION" \
