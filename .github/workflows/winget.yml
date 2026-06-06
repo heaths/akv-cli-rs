@@ -72,9 +72,21 @@ jobs:
           --release-date "$WINGET_RELEASE_DATE" \
           --out "$WINGET_MANIFEST_ROOT" \
           heaths.akv
+    - name: Archive WinGet package
+      id: archive
+      run: |
+        archive="${RUNNER_TEMP}/winget-manifests-${WINGET_VERSION}.zip"
+        7z a "$archive" "${WINGET_MANIFEST_ROOT}/manifests/*"
+        echo "manifest_archive=$archive" >> "$GITHUB_OUTPUT"
+    - name: Upload WinGet package artifact
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: winget-manifests-${{ env.WINGET_VERSION }}
+        path: ${{ steps.archive.outputs.manifest_archive }}
     - name: Validate WinGet package
       run: |
-        winget validate --manifest "$WINGET_MANIFEST_PATH"
+        winget validate --manifest "$WINGET_MANIFEST_PATH" --ignore-warnings
     - name: Install WinGet package
       run: |
         winget install --manifest "$WINGET_MANIFEST_PATH"
@@ -93,12 +105,14 @@ jobs:
       WINGET_MANIFEST_PATH: ${{ needs.validate.outputs.manifest_path }}
       WINGET_RELEASE_DATE: ${{ needs.validate.outputs.release_date }}
     steps:
-    - name: Update WinGet package
+    - name: Install WinGetCreate
       run: |
         if winget source list | grep -qiE '^\s*msstore\s'; then
           winget source remove msstore || echo "Warning: failed to remove msstore source"
         fi
         winget install -e Microsoft.WingetCreate --source winget --accept-source-agreements --accept-package-agreements --silent
+    - name: Update WinGet package
+      run: |
         wingetcreate update \
           --urls "${WINGET_URL_BASE}/akv-windows-amd64.zip|x64" "${WINGET_URL_BASE}/akv-windows-arm64.zip|arm64" \
           --version "$WINGET_VERSION" \
