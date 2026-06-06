@@ -53,7 +53,9 @@ async fn run(loaded_dotenv: Dotenv, args: Args) -> Result<()> {
         _ => LevelFilter::TRACE,
     };
 
-    let mut filter = EnvFilter::from_default_env();
+    let mut filter = EnvFilter::builder()
+        .with_default_directive(LevelFilter::OFF.into())
+        .from_env_lossy();
     if matches!(filter.max_level_hint(), Some(level) if level < verbosity) {
         filter = filter.add_directive(verbosity.into());
     }
