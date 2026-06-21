@@ -12,7 +12,7 @@ use azure_core::credentials::TokenCredential;
 use azure_identity::{AzureDeveloperCliCredential, DeveloperToolsCredential};
 #[cfg(feature = "color")]
 use clap::ColorChoice;
-use clap::Parser;
+use clap::{CommandFactory as _, Parser};
 use commands::Commands;
 use std::{
     path::PathBuf,
@@ -28,6 +28,8 @@ use tracing_subscriber::{
 
 #[tokio::main]
 async fn main() {
+    clap_complete::CompleteEnv::with_factory(Args::command).complete();
+
     let mut style = ColorMode::Auto.style();
     let loaded_dotenv = match dotenv() {
         Ok(b) => b,
