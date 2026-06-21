@@ -1,6 +1,6 @@
 {
   "lspServers": {
-    "rust-analyzer": {
+    "rust": {
       "command": "rust-analyzer",
       "fileExtensions": {
         ".rs": "rust"
