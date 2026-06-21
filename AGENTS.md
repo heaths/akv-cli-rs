@@ -21,11 +21,11 @@ cargo doc --all-features --no-deps --workspace   # docs
 
 Use these skills when applicable. Read the skill file for full instructions.
 
-| Skill              | File                                           | When to use                           |
-|--------------------|------------------------------------------------|---------------------------------------|
-| check-spelling     | `.github/skills/check-spelling/SKILL.md`       | Checking or fixing spelling errors    |
-| lint-markdown      | `.github/skills/lint-markdown/SKILL.md`        | Linting or fixing markdown formatting |
-| pin-github-actions | `.github/skills/pin-github-actions/SKILL.md`   | Pin GitHub Actions to a commit SHA    |
+| Skill              | File                                         | When to use                           |
+| ------------------ | -------------------------------------------- | ------------------------------------- |
+| check-spelling     | `.agents/skills/check-spelling/SKILL.md`     | Checking or fixing spelling errors    |
+| lint-markdown      | `.agents/skills/lint-markdown/SKILL.md`      | Linting or fixing markdown formatting |
+| pin-github-actions | `.agents/skills/pin-github-actions/SKILL.md` | Pin GitHub Actions to a commit SHA    |
 
 ## Workflow
 
