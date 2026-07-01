@@ -28,11 +28,11 @@ pub enum Commands {
     /// Inject secrets from Azure Key Vault into a templated file or input between {{ }}
     Inject(inject::Args),
 
-    /// Pass secrets in environment variables to a process.
-    Run(run::Args),
-
     /// Read a secret from Azure Key Vault.
     Read(read::Args),
+
+    /// Pass secrets in environment variables to a process.
+    Run(run::Args),
 
     /// Encrypt content to a compact JSON Web Encryption (JWE) token.
     Encrypt(encrypt::Args),
