@@ -38,6 +38,13 @@ async fn main() {
     };
 
     let args = Args::parse();
+    #[cfg(help_markdown)]
+    {
+        if args.help_markdown {
+            clap_markdown::print_help_markdown::<Args>();
+            return;
+        }
+    }
     style = args.color_mode().style();
     if let Err(err) = run(loaded_dotenv, args).await {
         eprintln!("{}: {err:#}", style.error("Error"));
@@ -100,6 +107,11 @@ struct Args {
     /// Log verbose messages. Pass `-vv` to log more verbosely.
     #[arg(global = true, short = 'v', long, action = clap::ArgAction::Count)]
     verbose: u8,
+
+    /// Print help as markdown.
+    #[cfg(help_markdown)]
+    #[arg(global = true, long, hide = true)]
+    help_markdown: bool,
 }
 
 impl Args {

@@ -58,6 +58,10 @@ pub enum Commands {
         #[arg(value_enum)]
         shell: Shell,
     },
+
+    /// Print help as markdown.
+    #[cfg(help_markdown)]
+    HelpMarkdown,
 }
 
 impl Commands {
@@ -75,6 +79,11 @@ impl Commands {
                 let mut cmd = super::Args::command();
                 let bin_name = cmd.get_name().to_string();
                 generate(*shell, &mut cmd, bin_name, &mut io::stdout());
+                Ok(())
+            }
+            #[cfg(help_markdown)]
+            Commands::HelpMarkdown => {
+                clap_markdown::print_help_markdown::<super::Args>();
                 Ok(())
             }
         }

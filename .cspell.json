@@ -10,6 +10,7 @@
     "rust-toolchain.toml"
   ],
   "words": [
+    "cfgs",
     "ciphertext",
     "clippy",
     "cooldown",
