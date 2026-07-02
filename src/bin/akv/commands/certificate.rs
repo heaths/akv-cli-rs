@@ -98,7 +98,7 @@ pub enum Commands {
     /// Edits a certificate in an Azure Key Vault.
     #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     Edit {
-        /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificate/my-certificate".
+        /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificates/my-certificate".
         #[arg(value_name = "URL", conflicts_with_all = ["name", "version"])]
         id: Option<Url>,
 
@@ -130,7 +130,7 @@ pub enum Commands {
     /// Edits the certificate policy for the next certificate request.
     #[command(group(ArgGroup::new("ident").args(&["id", "name"]).required(true)))]
     EditPolicy {
-        /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificate/my-certificate".
+        /// The certificate URL e.g., "https://my-vault.vault.azure.net/certificates/my-certificate".
         #[arg(value_name = "URL")]
         id: Option<Url>,
 

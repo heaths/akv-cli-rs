@@ -73,6 +73,9 @@ yansi = { version = "1.0.1", features = [
     "detect-tty",
 ], optional = true }
 
+[target.'cfg(help_markdown)'.dependencies]
+clap-markdown = "0.1.5"
+
 [dev-dependencies]
 async-trait = "0.1.88"
 azure_storage_blob = "1.0.0"
@@ -83,6 +86,12 @@ wildcard = "0.3.0"
 opt-level = "s"
 panic = "abort"
 strip = "debuginfo"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = [
+    "cfg(help_markdown)",
+]
 
 [lints.rustdoc]
 bare_urls = "allow"

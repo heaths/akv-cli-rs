@@ -153,6 +153,14 @@ Now you can run the `blobs` example within the `akv run` command:
 cargo run -- run -- cargo run --example blobs
 ```
 
+## Help
+
+To view all help options, you can print all subcommands and arguments as markdown:
+
+```bash
+RUSTFLAGS='--cfg help_markdown' cargo run -- help-markdown
+```
+
 ## Troubleshooting
 
 To help troubleshoot issues, you can trace information to the terminal:

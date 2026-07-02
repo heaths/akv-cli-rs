@@ -23,6 +23,7 @@ Use these skills when applicable. Read the skill file for full instructions.
 
 | Skill              | File                                         | When to use                           |
 | ------------------ | -------------------------------------------- | ------------------------------------- |
+| analyze-help       | `.agents/skills/analyze-help/SKILL.md`       | When CLI commands or arguments change |
 | check-spelling     | `.agents/skills/check-spelling/SKILL.md`     | Checking or fixing spelling errors    |
 | lint-markdown      | `.agents/skills/lint-markdown/SKILL.md`      | Linting or fixing markdown formatting |
 | pin-github-actions | `.agents/skills/pin-github-actions/SKILL.md` | Pin GitHub Actions to a commit SHA    |
