@@ -11,6 +11,13 @@ repository = "https://github.com/heaths/akv-cli-rs"
 license = "MIT"
 rust-version = "1.88"
 
+include = [
+    "/.cargo/",
+    "/src/",
+    "/LICENSE.txt",
+    "/README.md",
+]
+
 [features]
 default = ["color"]
 color = ["clap/color", "colored_json", "yansi"]
