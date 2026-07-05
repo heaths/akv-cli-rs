@@ -161,6 +161,14 @@ To view all help options, you can print all subcommands and arguments as markdow
 RUSTFLAGS='--cfg help_markdown' cargo run -- help-markdown
 ```
 
+## Publishing
+
+The release pipeline uses several environments that require [tokens](https://github.com/settings/tokens):
+
+* crates-io: [Create](https://crates.io/settings/tokens) an API token that can push new versions of an existing crate.
+* homebrew: Classic PAT with `public_repo` permission.
+* winget ([docs](https://github.com/microsoft/winget-create/blob/main/doc/token.md)): Classic PAT with `public_repo` permission with TTL <= 7 days.
+
 ## Troubleshooting
 
 To help troubleshoot issues, you can trace information to the terminal:
