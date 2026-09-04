@@ -275,9 +275,9 @@ dependencies = [
 
 [[package]]
 name = "azure_security_keyvault_certificates"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c21c059d9a7cc6499b886f294f7b66b1a2c1e5c088b8dc7a56aedc01f8ad027"
+checksum = "40f179dd7850582ea140a280a99cdaac922134857c140a11d580c830f3a27978"
 dependencies = [
  "async-lock",
  "async-trait",
@@ -291,9 +291,9 @@ dependencies = [
 
 [[package]]
 name = "azure_security_keyvault_keys"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb869c31138eaf27e4bb4854e51810964cf689925d2ce0a790e9be37188e45fb"
+checksum = "30f1956e1a87b5e2cfcc41febeed0a0131bfc40631ff54b4912f75b2ccbe1271"
 dependencies = [
  "async-lock",
  "async-trait",
@@ -306,9 +306,9 @@ dependencies = [
 
 [[package]]
 name = "azure_security_keyvault_secrets"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e96b370d75ebb8807cc1ccfc6fe647b1e61e13052cba2e800b95f0cf0bd27d9a"
+checksum = "a344d7c923ea305fa36bdad4d36c54e7c6fb806077430efcafb19ee40ed7b786"
 dependencies = [
  "async-lock",
  "async-trait",
