@@ -3,7 +3,7 @@
     "node": ">=22.0.0"
   },
   "devDependencies": {
-    "cspell": "10.3.0",
+    "cspell": "10.3.3",
     "markdownlint-cli2": "0.23.2"
   }
 }
