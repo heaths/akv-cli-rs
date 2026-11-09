@@ -22,7 +22,6 @@ name = "akv-cli"
 version = "1.0.0"
 dependencies = [
  "async-lock",
- "async-stream",
  "async-trait",
  "aws-lc-rs",
  "azure_core",
