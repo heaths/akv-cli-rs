@@ -31,9 +31,11 @@ jobs:
         - ubuntu-latest
         - windows-latest
     steps:
-    - name: Checkout
+    - &checkout
+      name: Checkout
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-    - name: Cache
+    - &cache
+      name: Cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
@@ -43,8 +45,13 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Set up toolchain
-      run: rustup install
+    - &setup
+      name: Set up toolchain
+      run: |
+        rustup install
+        rustc -V
+        cargo -V
+        cargo clippy -V
     - name: Test
       run: cargo test --all-features --workspace ${{ inputs.release && '--release' || '' }}
 
@@ -52,20 +59,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ !inputs.release || github.event_name != 'workflow_call' }}
     steps:
-    - name: Checkout
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-    - name: Cache
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Set up toolchain
-      run: rustup install
+    - *checkout
+    - *cache
+    - *setup
     - name: Set up Node.js
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
