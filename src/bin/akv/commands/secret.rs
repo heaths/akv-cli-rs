@@ -23,8 +23,11 @@ use azure_security_keyvault_secrets::{
 use clap::{ArgGroup, Subcommand};
 use futures::{future, TryStreamExt as _};
 use prettytable::{color, format, Attr, Cell, Row, Table};
+use std::sync::OnceLock;
 use timeago::Formatter;
 use tracing::{Level, Span};
+
+static CLIENT: OnceLock<SecretClient> = OnceLock::new();
 
 // clap doesn't support global, required arguments so we have to put `vault` into each subcommand.
 
@@ -305,7 +308,10 @@ impl Commands {
         current.record("name", &*name);
         current.record("version", version.as_deref());
 
-        let client = SecretClient::new(&vault, credential()?, None)?;
+        let client = CLIENT.get_or_try_init(|| {
+            let credential = credential()?;
+            SecretClient::new(&vault, credential, None).map_err(Into::<crate::Error>::into)
+        })?;
         let secret = client
             .get_secret(
                 &name,
@@ -561,3 +567,6 @@ impl IsDefault for SecretAttributes {
         self.enabled.is_none() && self.expires.is_none() && self.not_before.is_none()
     }
 }
+
+#[cfg(test)]
+mod tests;

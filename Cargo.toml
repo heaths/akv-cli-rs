@@ -26,11 +26,11 @@ color = ["clap/color", "colored_json", "yansi"]
 async-lock = "3.4.0"
 async-trait = "0.1.88"
 aws-lc-rs = "1.17.0"
-azure_core = "1.0.0"
-azure_identity = { version = "1.0.0", features = ["tokio"] }
-azure_security_keyvault_certificates = "1.0.0"
-azure_security_keyvault_keys = "1.0.0"
-azure_security_keyvault_secrets = "1.0.0"
+azure_core = "1.2.0-beta.2"
+azure_identity = { version = "1.1.0-beta.2", features = ["tokio"] }
+azure_security_keyvault_certificates = "1.1.0-beta.3"
+azure_security_keyvault_keys = "1.1.0-beta.2"
+azure_security_keyvault_secrets = "1.1.0-beta.2"
 clap = { version = "4.5.28", default-features = false, features = [
     "derive",
     "env",
@@ -77,7 +77,16 @@ clap-markdown = "0.1.5"
 
 [dev-dependencies]
 async-trait = "0.1.88"
-azure_storage_blob = "1.0.0"
+azure_security_keyvault_certificates = { version = "1.1.0-beta.3", features = [
+    "unstable_fake",
+] }
+azure_security_keyvault_keys = { version = "1.1.0-beta.2", features = [
+    "unstable_fake",
+] }
+azure_security_keyvault_secrets = { version = "1.1.0-beta.2", features = [
+    "unstable_fake",
+] }
+azure_storage_blob = "1.2.0-beta.1"
 criterion = "0.8.2"
 wildcard = "0.3.0"
 
@@ -85,6 +94,9 @@ wildcard = "0.3.0"
 opt-level = "s"
 panic = "abort"
 strip = "debuginfo"
+
+[lints.clippy]
+large_unopt_stack_frames = "allow" # cspell:ignore unopt
 
 [lints.rust.unexpected_cfgs]
 level = "warn"
