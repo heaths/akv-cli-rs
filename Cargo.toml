@@ -95,6 +95,9 @@ opt-level = "s"
 panic = "abort"
 strip = "debuginfo"
 
+[lints.clippy]
+large_unopt_stack_frames = "allow" # cspell:ignore unopt
+
 [lints.rust.unexpected_cfgs]
 level = "warn"
 check-cfg = [
