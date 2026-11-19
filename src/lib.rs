@@ -14,9 +14,8 @@ pub mod jose;
 pub mod json;
 pub mod parsing;
 
-use std::borrow::Cow;
-
 pub use error::*;
+use std::borrow::Cow;
 
 /// Whether to write color attributes to the terminal.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

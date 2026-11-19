@@ -646,7 +646,7 @@ pub enum KeyOperation {
 impl fmt::Display for KeyOperation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let value = self.to_possible_value();
-        f.write_str(value.as_ref().map_or_else(|| "(unknown)", |v| v.get_name()))
+        f.write_str(value.as_ref().map_or("(unknown)", |v| v.get_name()))
     }
 }
 
@@ -677,6 +677,12 @@ impl From<azure_security_keyvault_keys::models::KeyOperation> for KeyOperation {
             azure_security_keyvault_keys::models::KeyOperation::Verify => Self::Verify,
             azure_security_keyvault_keys::models::KeyOperation::WrapKey => Self::WrapKey,
             azure_security_keyvault_keys::models::KeyOperation::UnwrapKey => Self::UnwrapKey,
+            azure_security_keyvault_keys::models::KeyOperation::SecureUnwrapKey => {
+                Self::UnknownValue("secureUnwrapKey".into())
+            }
+            azure_security_keyvault_keys::models::KeyOperation::SecureWrapKey => {
+                Self::UnknownValue("secureWrapKey".into())
+            }
             azure_security_keyvault_keys::models::KeyOperation::UnknownValue(s) => {
                 Self::UnknownValue(s.clone())
             }

@@ -7,7 +7,7 @@
 mod commands;
 mod pty;
 
-use akv_cli::{ColorMode, ErrorKind, Result, ResultExt as _};
+use akv_cli::{ColorMode, Error, ErrorKind, Result, ResultExt as _};
 use azure_core::credentials::TokenCredential;
 use azure_identity::{AzureDeveloperCliCredential, DeveloperToolsCredential};
 #[cfg(feature = "color")]
